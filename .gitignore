@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+node_modules/
+_ui_check.log
+_shots*.log
+_run.txt
+_err.txt
+*.tmp
+.DS_Store
+Thumbs.db
+.venv/
+venv/

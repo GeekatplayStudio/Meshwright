@@ -1,0 +1,31 @@
+{
+  "name": "meshwright",
+  "version": "1.1.0",
+  "description": "Meshwright - mesh analysis, repair and STL preparation for 3D printing",
+  "main": "app.py",
+  "scripts": {
+    "test": "pytest --cov=engine --cov=app tests/",
+    "lint": "npx eslint ui/js/ && ruff check .",
+    "start": "python app.py",
+    "mcp": "python mcp_server.py",
+    "postinstall": "node scripts/vendor-three.js"
+  },
+  "keywords": [
+    "3d-printing",
+    "stl-converter",
+    "mesh-repair",
+    "obj",
+    "fbx",
+    "glb",
+    "decimation",
+    "threejs",
+    "pywebview"
+  ],
+  "author": "Vladimir Chopine, Geekatplay Studio",
+  "license": "MIT",
+  "devDependencies": {
+    "eslint": "^10.9.0",
+    "globals": "^16.0.0",
+    "three": "^0.128.0"
+  }
+}

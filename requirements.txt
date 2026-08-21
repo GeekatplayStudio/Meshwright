@@ -1,0 +1,16 @@
+# Meshwright — Geekatplay Studio
+trimesh>=5.0.0
+numpy>=1.26.0
+scipy>=1.16.0
+pymeshlab>=2025.7
+manifold3d>=3.5.0
+pymeshfix>=0.18.1        # MeshFix (Attene). GPL-3 — see README before redistributing binaries
+fast-simplification>=0.2.0
+pywebview>=6.2.0
+ufbx>=0.0.5
+pillow>=11.0.0
+lxml>=6.0.0
+shapely>=2.1.0
+mcp>=2.0.0               # MCP server (mcp_server.py)
+scikit-image>=0.25.0       # marching cubes for the voxel remesh fallback
+pyQuadriFlow>=0.0.4      # QuadriFlow smart retopology (MIT wrapper, BSD-3 core)

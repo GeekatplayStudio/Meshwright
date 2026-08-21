@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meshwright — Geekatplay Studio</title>
+    <link rel="icon" type="image/png" href="assets/icon.png">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="vendor/three.min.js"></script>
+    <script src="vendor/OrbitControls.js"></script>
+    <script src="vendor/TransformControls.js"></script>
+</head>
+<body>
+<div class="app">
+
+    <header class="topbar">
+        <button class="brand" id="btnAbout" title="About Meshwright">
+            <img class="brand-mark" src="assets/icon.png" alt="">
+            <span class="brand-name">Meshwright</span>
+            <span class="brand-studio">Geekatplay Studio</span>
+        </button>
+        <div class="topbar-actions">
+            <span class="file-name" id="fileName"></span>
+            <span class="state-badge" id="stateBadge" title="Current state number — every change creates a new numbered state"></span>
+            <div class="seg small">
+                <button id="btnUndo" title="Undo (Ctrl+Z)" disabled>Undo</button>
+                <button id="btnRedo" title="Redo (Ctrl+Y)" disabled>Redo</button>
+            </div>
+            <button id="btnHelp" class="btn" title="Keyboard shortcuts (?)">?</button>
+            <button id="btnConsole" class="btn" title="Show activity log (Ctrl+`)">Console</button>
+            <button id="btnOpen" class="btn btn-primary" title="Open model (Ctrl+O)">Open model</button>
+        </div>
+    </header>
+
+    <main class="workspace">
+
+        <section class="viewport" id="dropZone">
+            <div id="webgl"></div>
+
+            <div class="viewport-empty" id="emptyState">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 2 3 7v10l9 5 9-5V7l-9-5Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+                    <path d="M3 7l9 5 9-5M12 12v10" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+                </svg>
+                <p>Drop a model here or open one</p>
+                <small>OBJ · FBX · GLB · GLTF · STL · PLY · 3MF · DAE · OFF</small>
+            </div>
+
+            <div class="drop-overlay hidden" id="dropOverlay"><span>Release to load</span></div>
+
+            <div class="viewport-tools">
+                <div class="seg">
+                    <button data-mode="shaded" class="active" title="Shaded">Shaded</button>
+                    <button data-mode="clay" title="Clay">Clay</button>
+                    <button data-mode="normals" title="Normals">Normals</button>
+                    <button data-mode="xray" title="X-ray">X-ray</button>
+                </div>
+                <div class="seg">
+                    <button id="btnWire" title="Wireframe">Wire</button>
+                    <button id="btnIssues" class="active" title="Highlight open edges">Edges</button>
+                    <button id="btnGrid" class="active" title="Build plate">Plate</button>
+                    <button id="btnGizmo" title="Rotate with gizmo">Rotate</button>
+                    <button id="btnFit" title="Fit view">Fit</button>
+                </div>
+            </div>
+
+            <div class="nav">
+                <canvas id="compass" width="72" height="72"></canvas>
+                <div class="views">
+                    <button data-view="top">Top</button>
+                    <button data-view="front">Front</button>
+                    <button data-view="right">Right</button>
+                    <button data-view="iso">Iso</button>
+                    <button data-view="bottom">Bottom</button>
+                    <button data-view="back">Back</button>
+                    <button data-view="left">Left</button>
+                    <button id="btnClearHl">Clear</button>
+                </div>
+            </div>
+
+            <div class="console" id="console">
+                <div class="console-head">
+                    <span>Activity</span>
+                    <div><button id="btnConsoleClear" class="link">Clear</button><button id="btnConsoleClose" class="link">Close</button></div>
+                </div>
+                <div class="console-body" id="consoleBody"></div>
+            </div>
+
+            <div class="status hidden" id="status"><span class="dot"></span><span id="statusText"></span></div>
+        </section>
+
+        <div class="splitter" id="splitter" title="Drag to resize"></div>
+        <aside class="panel">
+
+            <div class="panel-scroll">
+
+                <!-- Readiness -->
+                <section class="card" id="cardHealth">
+                    <div class="health">
+                        <div class="ring" id="scoreRing"><span id="scoreValue">–</span></div>
+                        <div>
+                            <div class="health-verdict" id="verdict">No model loaded</div>
+                            <div class="health-sub" id="verdictSub">Open a file to run diagnostics. Drag to orbit, scroll to zoom, right-drag to pan.</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Issues -->
+                <section class="card">
+                    <h2>Diagnostics <span class="count" id="issueCount"></span><span class="right links"><button id="btnReanalyse" class="link" disabled>Re-analyse</button><button id="btnReport" class="link" disabled>Save JSON</button></span></h2>
+                    <p class="hint" id="issueHint">Click an issue to locate it on the model.</p>
+                    <ul class="issues" id="issueList"><li class="muted">—</li></ul>
+                </section>
+
+                <!-- Shells -->
+                <section class="card hidden" id="cardShells">
+                    <h2>Separate pieces <span class="count" id="shellCount"></span></h2>
+                    <p class="hint">Pieces are colour-coded in the view. Tick the ones to delete — they turn red — then remove.</p>
+                    <ul class="shells" id="shellList"></ul>
+                    <div class="row three">
+                        <button id="btnShellsAll" class="btn wide">Select all</button>
+                        <button id="btnShellsHighlight" class="btn wide active">Highlight</button>
+                    </div>
+                    <button id="btnShellsRemove" class="btn wide" disabled>Remove selected</button>
+                </section>
+
+                <!-- Stats -->
+                <section class="card">
+                    <h2>Geometry</h2>
+                    <dl class="stats" id="statGrid">
+                        <dt>Faces</dt><dd id="sFaces">–</dd>
+                        <dt>Vertices</dt><dd id="sVerts">–</dd>
+                        <dt>Edges</dt><dd id="sEdges">–</dd>
+                        <dt>Shells</dt><dd id="sBodies">–</dd>
+                        <dt>Size</dt><dd id="sDims">–</dd>
+                        <dt>Volume</dt><dd id="sVolume">–</dd>
+                        <dt>Surface</dt><dd id="sArea">–</dd>
+                        <dt>Watertight</dt><dd id="sWater">–</dd>
+                        <dt>Winding</dt><dd id="sWinding">–</dd>
+                        <dt>Open edges</dt><dd id="sBoundary">–</dd>
+                        <dt>Non-manifold</dt><dd id="sNonMan">–</dd>
+                        <dt>Genus</dt><dd id="sGenus">–</dd>
+                    </dl>
+                </section>
+
+                <!-- Repair -->
+                <section class="card">
+                    <h2>Repair</h2>
+                    <label class="check"><input type="checkbox" id="chkStrict" checked><span>Force watertight (voxel rebuild as last resort)</span></label>
+                    <button id="btnRepair" class="btn btn-primary wide" disabled>Repair mesh</button>
+                    <button id="btnSlivers" class="btn wide hidden">Fix sliver triangles</button>
+                    <button id="btnRevert" class="link revert" disabled>Revert to original file</button>
+                    <div class="report hidden" id="report">
+                        <h3>What was fixed</h3>
+                        <ul id="fixList"></ul>
+                        <h3>Before → after</h3>
+                        <table id="changeTable"></table>
+                    </div>
+                </section>
+
+                <!-- Orientation -->
+                <section class="card">
+                    <h2>Orientation</h2>
+                    <p class="hint">Turn on <strong>Rotate</strong> in the viewport to drag the rings, or step 90° here. Applies to the exported STL.</p>
+                    <div class="row three">
+                        <button class="btn rot" data-axis="x" disabled>X +90°</button>
+                        <button class="btn rot" data-axis="y" disabled>Y +90°</button>
+                        <button class="btn rot" data-axis="z" disabled>Z +90°</button>
+                    </div>
+                </section>
+
+                <!-- Reduce -->
+                <section class="card">
+                    <h2>Reduce</h2>
+                    <div class="seg full" id="reduceMode">
+                        <button data-reduce="quadriflow" class="active" title="Rebuilds the surface as clean, evenly sized quads aligned to the shape. Best for organic and scanned models and true low-poly looks.">Smart retopo</button>
+                        <button data-reduce="quadric" title="Collapses edges while preserving topology and hard edges. Sharpest result.">Decimate</button>
+                        <button data-reduce="isotropic" title="Uniform triangles of equal size, then collapse to the target. Good for noisy scans.">Uniform</button>
+                    </div>
+                    <div class="row">
+                        <input type="range" id="sliderReduce" min="5" max="99.5" step="0.5" value="50" disabled>
+                        <span class="mono" id="reduceVal">50%</span>
+                    </div>
+                    <div class="row target">
+                        <span>Target</span>
+                        <input type="number" id="targetInput" class="mono" min="20" step="1" disabled>
+                        <span class="hint">faces</span>
+                    </div>
+                    <div class="presets">
+                        <button data-faces="500">500</button>
+                        <button data-faces="2000">2k</button>
+                        <button data-faces="10000">10k</button>
+                        <button data-faces="50000">50k</button>
+                    </div>
+                    <label class="check" id="rowSharp"><input type="checkbox" id="chkSharp" checked><span>Preserve sharp edges</span></label>
+                    <button id="btnReduce" class="btn wide" disabled>Reduce polygons</button>
+                    <div class="hint" id="reduceResult"></div>
+                </section>
+
+                <!-- Export -->
+                <section class="card">
+                    <h2>Export</h2>
+                    <div class="row two">
+                        <label>Source units
+                            <select id="selUnit">
+                                <option value="mm">Millimetres</option>
+                                <option value="cm">Centimetres</option>
+                                <option value="in">Inches</option>
+                            </select>
+                        </label>
+                        <label class="check"><input type="checkbox" id="chkAlign" checked><span>Rest on build plate</span></label>
+                    </div>
+                    <button id="btnExport" class="btn btn-primary wide" disabled>Export STL</button>
+                </section>
+
+                <!-- View -->
+                <section class="card">
+                    <h2>Light</h2>
+                    <div class="row"><span>Angle</span><input type="range" id="lightAz" min="0" max="360" value="45"></div>
+                    <div class="row"><span>Height</span><input type="range" id="lightEl" min="5" max="90" value="55"></div>
+                    <div class="row"><span>Power</span><input type="range" id="lightPow" min="0.2" max="2.5" step="0.1" value="1.2"></div>
+                </section>
+
+            </div>
+
+            <footer class="panel-foot">
+                Meshwright · Geekatplay Studio · Vladimir Chopine
+            </footer>
+        </aside>
+    </main>
+</div>
+
+<div class="modal hidden" id="about">
+    <div class="modal-card about-card">
+        <button class="about-close" id="btnAboutClose" title="Close (Esc)">&times;</button>
+        <div class="about-head">
+            <img src="assets/icon.png" alt="">
+            <div>
+                <h2>Meshwright <span class="mono" id="aboutVersion"></span></h2>
+                <p>Mesh analysis, repair and STL preparation for 3D printing</p>
+                <p class="by">Geekatplay Studio &middot; Vladimir Chopine</p>
+            </div>
+        </div>
+        <a class="donate" href="https://geekatplay.gumroad.com/coffee" data-url="https://geekatplay.gumroad.com/coffee">&#9749; Buy me a coffee &mdash; support Meshwright development</a>
+
+        <section>
+            <h3>What it does</h3>
+            <p>Meshwright takes any common 3D model, tells you exactly why it would fail on a 3D printer, fixes it while
+            reporting what changed, and exports a print-ready binary STL resting on the build plate.</p>
+        </section>
+
+        <section>
+            <h3>How it works</h3>
+            <ol>
+                <li><strong>Load</strong> &mdash; OBJ, FBX, GLB/GLTF, STL, PLY, 3MF, DAE, OFF are read with trimesh (ufbx and MeshLab as fallbacks); materials are skipped and duplicate vertices merged.</li>
+                <li><strong>Diagnose</strong> &mdash; open holes, boundary and non-manifold edges, face winding, inside-out normals, degenerate, duplicate and sliver triangles, unused vertices, separate shells, scale, volume and genus. Every issue carries its location so it can be highlighted on the model. A 0&ndash;100 readiness score summarises the result.</li>
+                <li><strong>Repair</strong> &mdash; a staged pipeline where each stage is measured and kept only if it helps: cleanup &rarr; orientation &rarr; small-hole filling &rarr; MeshFix &rarr; MeshLab non-manifold repair &rarr; Manifold3D solid reconstruction &rarr; voxel remesh as last resort. It re-runs until the mesh stops changing, then re-analyses the final result.</li>
+                <li><strong>Refine</strong> &mdash; sliver triangles are merged into larger neighbours (needles collapsed, caps flipped); polygon count is reduced three ways &mdash; QuadriFlow smart retopology (clean curvature-aligned quads, true low-poly), uniform isotropic remeshing, or topology-preserving quadric collapse &mdash; always with the measured surface deviation; separate pieces can be highlighted and removed; the model can be rotated with a gizmo or in 90&deg; steps.</li>
+                <li><strong>Safeguards</strong> &mdash; every change is a numbered state with undo/redo. A change that would add critical problems or discard most of the geometry is rejected unless you apply it anyway. Every state is snapshotted in the background so a crash can be recovered on the next start.</li>
+                <li><strong>Export</strong> &mdash; binary STL with unit scaling and build-plate alignment, plus a JSON report of the diagnostics and every operation applied.</li>
+            </ol>
+        </section>
+
+        <section>
+            <h3>Engines in use</h3>
+            <table class="libs" id="aboutLibs"></table>
+            <p class="small">Viewport: Three.js <span id="aboutThree"></span> &middot; Desktop shell: pywebview (Edge WebView2) &middot; Python <span id="aboutPython"></span> on <span id="aboutPlatform"></span></p>
+        </section>
+
+        <section>
+            <h3>Integrations</h3>
+            <p>The same engine is available to AI assistants and editors through an MCP server (<span class="mono">python mcp_server.py</span>)
+            and directly from Python (<span class="mono">engine.service.MeshService</span>). All inputs are validated and every call is undoable.</p>
+        </section>
+
+        <a class="donate" href="https://geekatplay.gumroad.com/coffee" data-url="https://geekatplay.gumroad.com/coffee">&#9749; Buy me a coffee &mdash; geekatplay.gumroad.com/coffee</a>
+        <p class="small center">&copy; Geekatplay Studio &middot; Vladimir Chopine &middot; <a href="https://www.geekatplay.com" data-url="https://www.geekatplay.com">geekatplay.com</a></p>
+    </div>
+</div>
+
+<div class="modal hidden" id="modal">
+    <div class="modal-card">
+        <h3 id="modalTitle"></h3>
+        <div id="modalBody"></div>
+        <div class="modal-actions" id="modalActions"></div>
+    </div>
+</div>
+
+<script src="js/viewer.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
