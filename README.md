@@ -49,11 +49,25 @@ Most "mesh repair" tools give you a spinner and a green tick. Meshwright tells y
 ```bash
 git clone https://github.com/GeekatplayStudio/Meshwright.git
 cd Meshwright
-install.bat          # or:  .\install.ps1   /   pip install -r requirements.txt
-start.bat            # or:  .\start.ps1     /   python app.py
+install.bat          # or:  .\install.ps1
+start.bat            # or:  .\start.ps1
 ```
 
-Requires **Python 3.10+**. Node.js is only needed for linting.
+Requires **Python 3.10+**. Node.js is optional (linting and refreshing the vendored Three.js).
+
+> **The installer creates an isolated `.venv` inside the project folder.** Meshwright pulls in
+> numpy, scipy and several mesh libraries; installing those into a shared Python can silently
+> upgrade numpy and break unrelated projects that pin it (numba, pyarrow, torch, …). `start.bat`
+> and `start.ps1` use that `.venv` automatically. Pass `-Global` to `install.ps1` if you really
+> want it in your system Python.
+
+Installing by hand into an environment of your own:
+
+```bash
+python -m venv .venv
+.venv\Scripts\python -m pip install -r requirements.txt
+.venv\Scripts\python app.py
+```
 
 Drop a model onto the window, or press <kbd>Ctrl</kbd>+<kbd>O</kbd>.
 
@@ -250,12 +264,17 @@ Meshwright is a careful integration of the best open mesh libraries. Full credit
 ## Development
 
 ```bash
-pip install -r requirements.txt
-npm install
-npm test          # pytest, 52 tests
+python -m venv .venv
+.venv\Scripts\python -m pip install -r requirements-dev.txt
+npm install       # vendors Three.js into ui/vendor and installs eslint
+
+npm test          # pytest, 54 tests
 npm run lint      # eslint + ruff
 npm run mcp       # start the MCP server
 ```
+
+Dependency versions in `requirements.txt` are deliberately bounded (`numpy>=1.26,<2.4` and so on) so
+an install can never drag a shared environment to an incompatible version.
 
 ---
 

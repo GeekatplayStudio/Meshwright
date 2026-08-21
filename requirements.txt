@@ -1,16 +1,29 @@
 # Meshwright — Geekatplay Studio
-trimesh>=5.0.0
-numpy>=1.26.0
-scipy>=1.16.0
-pymeshlab>=2025.7
-manifold3d>=3.5.0
-pymeshfix>=0.18.1        # MeshFix (Attene). GPL-3 — see README before redistributing binaries
-fast-simplification>=0.2.0
-pywebview>=6.2.0
-ufbx>=0.0.5
-pillow>=11.0.0
-lxml>=6.0.0
-shapely>=2.1.0
-mcp>=2.0.0               # MCP server (mcp_server.py)
-scikit-image>=0.25.0       # marching cubes for the voxel remesh fallback
-pyQuadriFlow>=0.0.4      # QuadriFlow smart retopology (MIT wrapper, BSD-3 core)
+#
+# Install with install.bat / install.ps1, which puts these in an isolated .venv.
+# Version ranges are deliberately bounded: an unbounded numpy can silently
+# upgrade a shared Python install and break unrelated projects (numba, pyarrow,
+# torch and friends all pin numpy).
+
+numpy>=1.26,<2.4
+scipy>=1.11,<2
+trimesh>=4.5,<6
+pywebview>=5.0,<7
+pillow>=10.0
+
+# Mesh engines (all optional at runtime — Meshwright detects what is present
+# and degrades gracefully, see docs/LICENSES.md)
+pymeshlab>=2023.12         # non-manifold repair, decimation, isotropic remesh   (GPL-3)
+pymeshfix>=0.17            # hole filling, self-intersection repair              (GPL-3)
+manifold3d>=2.3            # guaranteed-manifold solid reconstruction
+fast-simplification>=0.1.7 # fast quadric decimation
+pyQuadriFlow>=0.0.4        # smart quad retopology (QuadriFlow)
+scikit-image>=0.22,<0.27   # marching cubes for the voxel remesh fallback
+
+# Format support
+ufbx>=0.0.5                # FBX fallback loader
+lxml>=5.0                  # 3MF / DAE
+shapely>=2.0               # 2D section helpers in trimesh
+
+# Automation
+mcp>=1.0                   # MCP server (mcp_server.py)

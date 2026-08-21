@@ -2,6 +2,20 @@
 
 All notable changes to Meshwright. Format based on [Keep a Changelog](https://keepachangelog.com).
 
+## [1.1.2] — 2026-08-21
+
+### Fixed
+- **The installer could break other Python projects.** `requirements.txt` used unbounded version
+  ranges, so `pip install -r requirements.txt` on a shared interpreter upgraded numpy to the latest
+  release and broke unrelated packages that pin it (numba, pyarrow and friends). Every dependency
+  now has an upper bound (`numpy>=1.26,<2.4`), and the installer creates an isolated `.venv` inside
+  the project folder by default. `start.bat`, `start.ps1` and the new `run-mcp.bat` use it
+  automatically; `install.ps1 -Global` opts back into a system-wide install.
+
+### Added
+- `requirements-dev.txt` for the test and lint tooling.
+- `run-mcp.bat` to start the MCP server from the project environment.
+
 ## [1.1.1] — 2026-08-21
 
 ### Fixed

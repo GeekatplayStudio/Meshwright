@@ -7,9 +7,14 @@ Thanks for helping improve Meshwright — Geekatplay Studio, Vladimir Chopine.
 ```bash
 git clone https://github.com/GeekatplayStudio/Meshwright.git
 cd Meshwright
-pip install -r requirements.txt
-npm install                 # linting only
+python -m venv .venv
+.venv\Scripts\python -m pip install -r requirements-dev.txt
+npm install                 # vendors Three.js, installs eslint
 ```
+
+Always work inside the `.venv`. Meshwright depends on numpy, scipy and several compiled mesh
+libraries; installing them into a shared interpreter can upgrade numpy underneath other projects.
+Keep the bounds in `requirements.txt` — an unbounded `numpy>=x` is how that happens.
 
 Three.js is vendored into `ui/vendor/` by `npm install` (see `install.ps1`). If the viewport is
 blank, re-run the installer — the app never loads scripts from a CDN, so it works offline.
@@ -17,8 +22,8 @@ blank, re-run the installer — the app never loads scripts from a CDN, so it wo
 ## Running
 
 ```bash
-python app.py         # desktop app
-python mcp_server.py  # MCP server (stdio)
+.venv\Scripts\python app.py         # desktop app  (or start.bat)
+.venv\Scripts\python mcp_server.py  # MCP server   (or run-mcp.bat)
 ```
 
 ## Tests and linting

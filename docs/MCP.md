@@ -5,8 +5,8 @@ so an AI assistant or editor can analyse and repair meshes directly. It is the *
 `engine.service.MeshService` the desktop app uses — same validation, same safety guard, same undo.
 
 ```bash
-python mcp_server.py        # stdio transport
-npm run mcp                 # same thing
+run-mcp.bat                 # uses the project's .venv
+python mcp_server.py        # or your own environment
 ```
 
 ## Claude Desktop
@@ -17,7 +17,7 @@ npm run mcp                 # same thing
 {
   "mcpServers": {
     "meshwright": {
-      "command": "python",
+      "command": "D:/path/to/Meshwright/.venv/Scripts/python.exe",
       "args": ["D:/path/to/Meshwright/mcp_server.py"]
     }
   }
@@ -27,8 +27,11 @@ npm run mcp                 # same thing
 ## Claude Code
 
 ```bash
-claude mcp add meshwright -- python D:/path/to/Meshwright/mcp_server.py
+claude mcp add meshwright -- D:/path/to/Meshwright/.venv/Scripts/python.exe D:/path/to/Meshwright/mcp_server.py
 ```
+
+Point the command at the project's `.venv` interpreter so the server gets the versions Meshwright
+was installed with.
 
 ## Tools
 
