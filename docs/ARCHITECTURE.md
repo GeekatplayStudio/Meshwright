@@ -41,11 +41,18 @@ pass `force=True` deliberately.
 next to a journal, so a 2 M-face save never blocks the UI. A clean exit deletes them; an unclean one
 leaves them for recovery.
 
+**Say what is happening.** Anything that can take more than a moment opens a job: the service emits
+a `start` event carrying the face count and an estimated duration, then a `done` event with the real
+elapsed time. The desktop adapter turns those into the bottom-right notifications; the MCP adapter
+folds them into the `log` array of the tool result. Estimates come from `estimate_seconds()`, which
+is a measured cost-per-million-faces table — deliberately rough, and only ever used to set
+expectations, never to decide anything.
+
 ## Modules
 
 | File | Responsibility |
 |---|---|
-| `engine/service.py` | The API. Validation, state stack, safety guard, autosave, history, previews |
+| `engine/service.py` | The API. Validation, state stack, safety guard, autosave, history, previews, progress events |
 | `engine/validation.py` | Path, number, choice, index-list and rotation-matrix sanitising |
 | `engine/session_store.py` | Background snapshots, journal, crash-recovery discovery |
 | `engine/model_loader.py` | Format loading with trimesh → ufbx → MeshLab fallbacks |
@@ -85,6 +92,11 @@ highlight lands exactly on the triangle it describes (verified to 0.0000 mm in t
 
 ## Testing
 
-52 tests cover the analysis checks, each repair stage, sliver geometry, retopology quality
-(including "must not return worse topology than the source"), the safety guard, undo/redo/revert,
-validation, crash recovery and the adapters. Run `npm test`.
+54 tests cover the analysis checks, each repair stage, sliver geometry (including "must never open
+a watertight mesh"), retopology quality ("must not return worse topology than the source"), the
+safety guard, undo/redo/revert, validation, crash recovery and the adapters.
+
+```bash
+.venv\Scripts\python -m pip install -r requirements-dev.txt
+npm test
+```

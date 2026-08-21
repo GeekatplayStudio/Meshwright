@@ -194,7 +194,7 @@ The desktop app is a thin shell over one engine. The same engine is available to
 } }
 ```
 
-15 tools: `load_model, analyze, repair, fix_slivers, simplify, retopologize, remove_shells, rotate, undo, redo, revert, states, export_stl, export_report` + a `meshwright://report` resource.
+14 tools — `load_model, analyze, repair, fix_slivers, simplify, retopologize, remove_shells, rotate, undo, redo, revert, states, export_stl, export_report` — plus a `meshwright://report` resource.
 
 ```python
 from engine.service import MeshService

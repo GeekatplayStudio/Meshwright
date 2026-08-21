@@ -20,12 +20,23 @@ svc.close()                             # clears the crash-recovery snapshots
 ## Constructor
 
 ```python
-MeshService(log=None, autosave=True)
+MeshService(log=None, autosave=True, progress=None)
 ```
 
 - `log(message, level)` — called for every step; `level` is `info` / `ok` / `warn` / `error`.
   A logger that raises can never abort an operation.
 - `autosave` — write a background snapshot of every accepted state for crash recovery.
+- `progress(**event)` — called when a long operation starts and finishes:
+
+  ```python
+  {"state": "start", "operation": "retopo", "label": "Smart retopology to 50,000 faces",
+   "faces": 1994490, "eta": 92.7, "eta_text": "about 1–3 minutes"}
+  {"state": "done",  "operation": "retopo", "label": "...", "elapsed": 88.4}
+  ```
+
+  Use it to drive a progress bar or a status line. `engine.service.estimate_seconds(operation, faces)`
+  and `describe_duration(seconds)` are available on their own if you want the estimate without
+  running anything.
 
 ## Operations
 
@@ -34,7 +45,7 @@ MeshService(log=None, autosave=True)
 | `load(path)` | Full result: analysis, stats, shells, preview, state id |
 | `analyze()` | Fresh diagnostics for the current mesh |
 | `repair(strict_watertight=True, force=False)` | Result + `report` with `fixes`, `changes`, `passes` |
-| `fix_slivers(min_angle_deg=1.0, force=False)` | Result + `info` (`before`, `after`, `collapsed`, `flipped`) |
+| `fix_slivers(min_angle_deg=1.0, force=False)` | Result + `info` (`before`, `after`, `collapsed`, `flipped`, `skipped`) |
 | `simplify(keep_fraction=0.5, force=False)` | Result + `info` including `deviation` |
 | `retopo(target_faces, method="quadriflow", preserve_sharp=True, adaptive=True)` | Result + `info` |
 | `remove_shells(indices)` | Result for the remaining geometry |
@@ -76,6 +87,9 @@ if not res["success"] and res.get("rejected"):
 
 `simplify` and `retopo` are exempt from the geometry-loss rule — dropping faces is the point — but
 they still verify the result and log a warning if new problems appear.
+
+`fix_slivers` reports `skipped`: slivers it refused to remove because the collapse or flip would
+have torn the surface. A few stubborn slivers are harmless; a hole is not.
 
 ## Crash recovery
 
