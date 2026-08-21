@@ -46,9 +46,38 @@ class _State:
         self.id, self.mesh, self.analysis, self.operation, self.shells = sid, mesh, analysis, operation, shells
 
 
+def estimate_seconds(operation: str, faces: int) -> float:
+    """
+    Rough wall-clock estimate, measured on a mid-range desktop. Used only to warn
+    the user before a long operation and to drive the progress bar; never exact.
+    """
+    f = max(1, faces) / 1e6
+    return {
+        "load": 8 * f + 1,
+        "analyse": 4 * f + 0.2,
+        "repair": 25 * f + 0.5,
+        "fix_slivers": 30 * f + 0.3,
+        "simplify": 6 * f + 0.3,
+        "retopo": 45 * f + 3,
+    }.get(operation, 5 * f + 0.5)
+
+
+def describe_duration(seconds: float) -> str:
+    if seconds < 3:
+        return "a moment"
+    if seconds < 60:
+        return f"about {int(round(seconds / 5.0)) * 5} seconds"
+    import math
+    mins = seconds / 60.0
+    lo = max(1, int(mins))
+    hi = max(lo + 1, int(math.ceil(mins * 1.4)))
+    return f"about {lo}–{hi} minutes"
+
+
 class MeshService:
-    def __init__(self, log=None, autosave: bool = True):
+    def __init__(self, log=None, autosave: bool = True, progress=None):
         self.log = log or (lambda m, level="info": None)
+        self._progress = progress or (lambda **kw: None)
         self.lock = threading.RLock()
         self.store = SessionStore() if autosave else None
         self.file_path = None
@@ -75,6 +104,35 @@ class MeshService:
         if not self._states:
             raise ServiceError("No model loaded.")
         return self.current
+
+    def progress(self, **kw):
+        try:
+            self._progress(**kw)
+        except Exception:
+            pass
+
+    def _job(self, operation: str, label: str, faces: int | None = None):
+        """Announce a long operation with an estimate, and close it out afterwards."""
+        svc = self
+        n = faces if faces is not None else (len(self.mesh.faces) if self.mesh is not None else 0)
+        eta = estimate_seconds(operation, n)
+
+        class Job:
+            def __enter__(s):
+                s.t = time.perf_counter()
+                svc.progress(state="start", operation=operation, label=label,
+                             faces=int(n), eta=round(eta, 1), eta_text=describe_duration(eta))
+                svc.log(f"{label} — {int(n):,} faces, {describe_duration(eta)}…")
+                return s
+
+            def __exit__(s, et, ev, tb):
+                elapsed = time.perf_counter() - s.t
+                if et is None:
+                    svc.progress(state="done", operation=operation, label=label, elapsed=round(elapsed, 2))
+                    svc.log(f"{label} done in {elapsed:.2f}s", "ok")
+                else:
+                    svc.progress(state="error", operation=operation, label=label, error=str(ev))
+        return Job()
 
     def _timer(self, label):
         svc = self
@@ -175,7 +233,11 @@ class MeshService:
     def load(self, path: str) -> dict:
         with self.lock:
             p = V.input_path(path)
-            self.log(f"Opening {p}")
+            size_mb = os.path.getsize(p) / 1e6
+            self.progress(state="start", operation="load", label=f"Loading {os.path.basename(p)}",
+                          faces=0, eta=round(2 + size_mb * 0.25, 1),
+                          eta_text=describe_duration(2 + size_mb * 0.25))
+            self.log(f"Opening {p} ({size_mb:.1f} MB)")
             t0 = time.perf_counter()
             mesh, _ = load_model(p, log=self.log)
             self.file_path = p
@@ -186,7 +248,10 @@ class MeshService:
             if self.store:
                 self.store.set_source(p)
             res = self._commit(mesh, "load", guard=False)
-            self.log(f"Ready in {time.perf_counter() - t0:.2f}s total", "ok")
+            elapsed = time.perf_counter() - t0
+            self.progress(state="done", operation="load", label=f"Loaded {os.path.basename(p)}",
+                          elapsed=round(elapsed, 2))
+            self.log(f"Ready in {elapsed:.2f}s total", "ok")
             return res
 
     def analyze(self) -> dict:
@@ -200,7 +265,7 @@ class MeshService:
         with self.lock:
             st = self._require()
             strict = V.boolean(strict_watertight, True)
-            with self._timer("Repair"):
+            with self._job("repair", "Repairing mesh"):
                 repaired, report = repair_mesh(st.mesh, strict_watertight=strict, log=self.log)
             for f in report["fixes"]:
                 self.log(f"{f['stage']}: {f['description']}", "ok")
@@ -215,7 +280,7 @@ class MeshService:
         with self.lock:
             st = self._require()
             ang = V.number(min_angle_deg, "min_angle_deg", 0.05, 15.0, 1.0)
-            with self._timer("Fixing sliver triangles"):
+            with self._job("fix_slivers", "Fixing sliver triangles"):
                 cleaned, info = fix_slivers(st.mesh, min_angle_deg=ang, log=self.log)
             self.log(f"Slivers {info['before']} → {info['after']} (collapsed {info['collapsed']}, flipped {info['flipped']})", "ok")
             res = self._commit(cleaned, "fix_slivers", info, force=V.boolean(force))
@@ -226,7 +291,7 @@ class MeshService:
         with self.lock:
             st = self._require()
             keep = V.number(keep_fraction, "keep_fraction", 0.01, 0.99, 0.5)
-            with self._timer(f"Decimating to {int(keep * 100)}% of faces"):
+            with self._job("simplify", f"Decimating to {int(keep * 100)}% of faces"):
                 reduced, info = reduce_mesh(st.mesh, target_factor=keep)
             info["deviation"] = deviation(st.mesh, reduced)
             self.log(f"{info['initial_faces']:,} → {info['final_faces']:,} faces ({info['method_used']}); "
@@ -250,7 +315,8 @@ class MeshService:
             current = st.analysis["stats"]["face_count"]
             target = int(V.number(target_faces, "target_faces", 20, max(20, current), 1000))
             meth = V.choice(method, "method", ("quadriflow", "isotropic", "quadric"), "quadriflow")
-            with self._timer(f"Retopology ({meth}) to {target:,} faces"):
+            verb = {"quadriflow": "Smart retopology", "quadric": "Decimating", "isotropic": "Uniform remeshing"}[meth]
+            with self._job("retopo", f"{verb} to {target:,} faces"):
                 out, info = retopologize(st.mesh, target, method=meth, preserve_sharp=V.boolean(preserve_sharp, True),
                                          adaptive=V.boolean(adaptive, True), log=self.log)
             if info["method_used"] == "none":
@@ -386,7 +452,7 @@ class MeshService:
             st = self._require()
             p = V.output_path(path, ".stl")
             unit = V.choice(scale_unit, "scale_unit", ("mm", "cm", "in"), "mm")
-            with self._timer(f"Exporting {os.path.basename(p)}"):
+            with self._job("export", f"Exporting {os.path.basename(p)}"):
                 res = export_to_stl(st.mesh, p, scale_unit=unit, align_origin=V.boolean(align_origin, True))
             self.log(f"Saved {res['file_size_mb']} MB, {res['face_count']:,} faces", "ok")
             self.history.append({"operation": "export_stl", "path": p, "time": time.strftime("%H:%M:%S")})

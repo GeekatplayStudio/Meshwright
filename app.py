@@ -36,6 +36,17 @@ def log(message: str, level: str = "info"):
             pass
 
 
+def progress(**event):
+    """Forward a progress event to the UI (toast + progress bar)."""
+    win = _state['window']
+    if win is None:
+        return
+    try:
+        win.evaluate_js(f"window.meshwright && window.meshwright.progress({json.dumps(event)})")
+    except Exception:
+        pass
+
+
 def _guarded(fn):
     """Turn service/validation errors into {success:false} results for the UI."""
     def wrapper(self, *args, **kwargs):
@@ -56,7 +67,7 @@ class AppApi:
     """Exposed to the UI through pywebview."""
 
     def __init__(self, service: MeshService | None = None):
-        self.svc = service or MeshService(log=log)
+        self.svc = service or MeshService(log=log, progress=progress)
 
     def set_window(self, window):
         _state['window'] = window

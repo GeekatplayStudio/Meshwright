@@ -276,3 +276,39 @@ select {
 #reduceResult { margin-top: 6px; min-height: 14px; }
 #reduceResult .dev-ok { color: var(--good); }
 #reduceResult .dev-warn { color: var(--warn); }
+
+/* Toast notifications (bottom-right of the viewport) */
+.toasts {
+    position: absolute; right: 14px; bottom: 14px; z-index: 8;
+    display: flex; flex-direction: column-reverse; gap: 8px; align-items: flex-end;
+    max-width: 380px; pointer-events: none;
+}
+.toast {
+    pointer-events: auto; width: 340px; background: rgba(30,33,38,.97); border: 1px solid var(--line);
+    border-left: 3px solid var(--muted); border-radius: 8px; padding: 10px 12px 10px 13px;
+    box-shadow: 0 6px 22px rgba(0,0,0,.45); animation: toast-in .18s ease-out;
+}
+.toast.busy   { border-left-color: var(--accent); }
+.toast.ok     { border-left-color: var(--good); }
+.toast.warn   { border-left-color: var(--warn); }
+.toast.error  { border-left-color: var(--bad); }
+.toast.leaving { animation: toast-out .18s ease-in forwards; }
+@keyframes toast-in  { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes toast-out { to { opacity: 0; transform: translateY(8px); } }
+.toast-head { display: flex; align-items: center; gap: 8px; }
+.toast-title { font-weight: 600; font-size: 12.5px; flex: 1; }
+.toast-x { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 15px; line-height: 1; padding: 0 2px; }
+.toast-x:hover { color: var(--text); }
+.toast-body { color: var(--muted); font-size: 12px; margin-top: 3px; }
+.toast-time { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.toast-bar { height: 3px; margin-top: 8px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.toast-bar i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 2px; transition: width .4s linear; }
+.toast.busy .spin {
+    width: 11px; height: 11px; border: 2px solid var(--line); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin .8s linear infinite; flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.toast .tick { color: var(--good); font-weight: 700; }
+.toast .bang { color: var(--bad); font-weight: 700; }
+.toast .warnmark { color: var(--warn); font-weight: 700; }
+body.working { cursor: progress; }

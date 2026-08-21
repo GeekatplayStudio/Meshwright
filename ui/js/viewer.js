@@ -51,7 +51,7 @@ class ModelViewer {
             clay: new THREE.MeshStandardMaterial({ color: 0xd8b98a, roughness: 0.9, metalness: 0.0, side: THREE.DoubleSide }),
             normals: new THREE.MeshNormalMaterial({ side: THREE.DoubleSide }),
             xray: new THREE.MeshBasicMaterial({ color: 0x9fc4ff, transparent: true, opacity: 0.18, side: THREE.DoubleSide, depthWrite: false }),
-            shells: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0.05, side: THREE.DoubleSide }),
+            shells: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92, metalness: 0.0, side: THREE.DoubleSide }),
         };
 
         new ResizeObserver(() => this.resize()).observe(this.container);
@@ -133,8 +133,9 @@ class ModelViewer {
         if (selected) return c.setHex(0xe5534b);
         const base = [0.62, 0.78, 0.36, 0.12, 0.88, 0.24, 0.70, 0.07];
         const hue = base[i % base.length];
-        const light = 0.62 - 0.10 * (Math.floor(i / base.length) % 3);
-        c.setHSL(hue, 0.52, light);
+        // Deep and saturated: a large piece under the key light washes out otherwise.
+        const light = 0.44 - 0.08 * (Math.floor(i / base.length) % 3);
+        c.setHSL(hue, 0.72, light);
         return c;
     }
 

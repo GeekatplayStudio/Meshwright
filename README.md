@@ -12,7 +12,7 @@ by [Geekatplay Studio](https://www.geekatplay.com) · Vladimir Chopine
 [![License](https://img.shields.io/badge/license-MIT-d9a441.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-3776ab.svg)](https://python.org)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-6ea8fe.svg)](#install)
-[![Tests](https://img.shields.io/badge/tests-52%20passing-4cc38a.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-54%20passing-4cc38a.svg)](tests/)
 [![MCP](https://img.shields.io/badge/MCP-ready-b06bd0.svg)](docs/MCP.md)
 
 [**☕ Support development**](https://geekatplay.gumroad.com/coffee) · [Quick start](#quick-start) · [Features](#what-it-does) · [Docs](docs/) · [MCP server](docs/MCP.md)
@@ -125,7 +125,21 @@ Every change creates a **numbered state**.
 - Every accepted state is snapshotted to disk in a background thread. If the app dies, the next start offers to **recover** it.
 - **Revert to original** is explicit, confirmed, and itself undoable.
 
-### 6 · Export
+### 6 · Always know what it is doing
+
+Long operations announce themselves before they start — how many faces they are about to process and
+roughly how long it will take — then show a live timer and progress bar in the bottom-right corner.
+Results stay on screen long enough to read and can be dismissed with a click.
+
+<div align="center">
+<img src="docs/images/13-progress.png" width="860" alt="Progress notification during a long operation">
+<br><em>"1,994,490 faces · about 1–2 minutes" — no more wondering whether it froze.</em>
+</div>
+
+Everything also goes to the activity console with timestamps, and to stdout, so a long run can be
+followed from the terminal.
+
+### 7 · Export
 
 Binary STL with source-unit scaling (mm / cm / in) and build-plate alignment, plus a **JSON report** of the diagnostics and every operation applied — good for client sign-off or a print-farm audit trail.
 

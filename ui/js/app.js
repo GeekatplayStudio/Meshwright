@@ -46,6 +46,98 @@ document.addEventListener('DOMContentLoaded', () => {
         updateTarget();
     }
 
+    /* ---------- toasts & progress ----------
+       Long operations announce themselves with an estimate, tick a progress bar
+       while they run, and report the real elapsed time when they finish. */
+    const toastBox = $('toasts');
+    const toasts = new Map();          // key -> {el, timer, started, eta, raf}
+
+    function dismissToast(key) {
+        const t = toasts.get(key);
+        if (!t) return;
+        clearTimeout(t.timer);
+        cancelAnimationFrame(t.raf);
+        t.el.classList.add('leaving');
+        setTimeout(() => t.el.remove(), 200);
+        toasts.delete(key);
+    }
+
+    function toast(key, { kind = 'info', title, body = '', sticky = false, ms = 6000, progress = false } = {}) {
+        let t = toasts.get(key);
+        if (!t) {
+            const el = document.createElement('div');
+            el.className = `toast ${kind}`;
+            el.innerHTML = `<div class="toast-head">
+                    <span class="mark"></span>
+                    <span class="toast-title"></span>
+                    <span class="toast-time"></span>
+                    <button class="toast-x" title="Dismiss">&times;</button>
+                </div>
+                <div class="toast-body"></div>
+                <div class="toast-bar hidden"><i></i></div>`;
+            el.querySelector('.toast-x').addEventListener('click', () => dismissToast(key));
+            toastBox.appendChild(el);
+            t = { el, timer: null, raf: 0 };
+            toasts.set(key, t);
+        }
+        clearTimeout(t.timer);
+        cancelAnimationFrame(t.raf);
+        t.el.className = `toast ${kind}`;
+        t.el.querySelector('.mark').innerHTML =
+            kind === 'busy' ? '<span class="spin"></span>' :
+            kind === 'ok' ? '<span class="tick">✓</span>' :
+            kind === 'error' ? '<span class="bang">!</span>' :
+            kind === 'warn' ? '<span class="warnmark">!</span>' : '';
+        t.el.querySelector('.toast-title').textContent = title;
+        const bodyEl = t.el.querySelector('.toast-body');
+        bodyEl.textContent = body;
+        bodyEl.classList.toggle('hidden', !body);
+        t.el.querySelector('.toast-bar').classList.toggle('hidden', !progress);
+        if (!sticky) t.timer = setTimeout(() => dismissToast(key), ms);
+        return t;
+    }
+
+    /* Runs the elapsed-time counter and the estimate bar for a running job. */
+    function runProgress(key, etaSeconds) {
+        const t = toasts.get(key);
+        if (!t) return;
+        t.started = performance.now();
+        const timeEl = t.el.querySelector('.toast-time');
+        const bar = t.el.querySelector('.toast-bar i');
+        const tick = () => {
+            if (!toasts.has(key)) return;
+            const s = (performance.now() - t.started) / 1000;
+            timeEl.textContent = s < 60 ? `${s.toFixed(0)}s` : `${Math.floor(s / 60)}m ${(s % 60).toFixed(0)}s`;
+            if (etaSeconds > 0) {
+                // asymptotic: approaches but never reaches 100% until it really finishes
+                const frac = 1 - Math.exp(-s / etaSeconds);
+                bar.style.width = `${Math.min(96, frac * 96).toFixed(1)}%`;
+            }
+            t.raf = requestAnimationFrame(tick);
+        };
+        tick();
+    }
+
+    /* Called from Python for every long operation. */
+    function onProgress(ev) {
+        const key = ev.operation || 'job';
+        if (ev.state === 'start') {
+            const faces = ev.faces ? `${fmt(ev.faces)} faces · ` : '';
+            toast(key, { kind: 'busy', title: ev.label, body: `${faces}${ev.eta_text}`, sticky: true, progress: true });
+            runProgress(key, ev.eta || 0);
+            document.body.classList.add('working');
+            logLine(`${ev.label} — ${ev.eta_text}`);
+        } else if (ev.state === 'done') {
+            const el = toasts.get(key);
+            if (el) { cancelAnimationFrame(el.raf); el.el.querySelector('.toast-bar i').style.width = '100%'; }
+            toast(key, { kind: 'ok', title: ev.label.replace(/…$/, ''), body: `Finished in ${ev.elapsed}s`, ms: 5000 });
+            document.body.classList.remove('working');
+        } else if (ev.state === 'error') {
+            toast(key, { kind: 'error', title: ev.label, body: ev.error || 'Failed', ms: 10000 });
+            document.body.classList.remove('working');
+        }
+    }
+
     /* ---------- state / undo / redo ---------- */
     function updateStateUI(res) {
         if (res.state_id != null) $('stateBadge').textContent = `state #${res.state_id}`;
@@ -75,6 +167,8 @@ document.addEventListener('DOMContentLoaded', () => {
              <strong>${res.would_be.verdict}</strong> (score ${res.would_be.score}).</p>`,
             [{ label: 'Keep current', primary: true }, { label: 'Apply anyway', action: retry }]);
         setStatus(`Rejected: ${res.reason}`, 'rejected', 6000);
+        toast('rejected', { kind: 'warn', title: 'Change rejected — previous state kept',
+                            body: res.reason, ms: 12000 });
         return true;
     }
 
@@ -490,7 +584,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ['dragleave', 'drop'].forEach(ev => zone.addEventListener(ev, e => { e.preventDefault(); overlay.classList.add('hidden'); }));
     // The actual file path arrives via the Python-side drop handler (see app.py),
     // which calls window.meshwright.load(path).
-    window.meshwright = { load: loadFile, log: logLine, offerRecovery };
+    window.meshwright = { load: loadFile, log: logLine, offerRecovery, progress: onProgress, toast };
 
     /* ---------- repair ---------- */
     $('btnRepair').addEventListener('click', async () => {
@@ -503,6 +597,11 @@ document.addEventListener('DOMContentLoaded', () => {
             showModel(res);
             renderReport(res.report);
             const ok = res.analysis && res.analysis.stats.is_watertight;
+            const fixes = (res.report.fixes || []).length;
+            toast('repair-result', { kind: ok ? 'ok' : 'warn',
+                title: ok ? 'Repair complete — watertight' : 'Repair finished — open edges remain',
+                body: fixes ? `${fixes} fix(es) applied over ${res.report.passes} pass(es)` : 'Nothing needed changing',
+                ms: 12000 });
             setStatus(ok ? 'Repair complete — mesh is watertight' : 'Repair finished — open edges remain', ok ? 'ok' : 'error', 4000);
         } catch (e) {
             setStatus(`Repair failed: ${e.message}`, 'error', 6000);
@@ -558,7 +657,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!res.success) { setStatus(res.error, 'error', 6000); return; }
             showModel(res);
             const i = res.info;
-            setStatus(`Slivers ${i.before} → ${i.after} (merged ${i.collapsed}, flipped ${i.flipped})`, i.after ? 'error' : 'ok', 5000);
+            const left = i.after ? ` · ${i.after} left in place (removing them would tear the surface)` : '';
+            toast('slivers', { kind: i.after ? 'warn' : 'ok',
+                title: `Slivers ${i.before} → ${i.after}`,
+                body: `merged ${i.collapsed}, flipped ${i.flipped}${left}`, ms: 12000 });
+            setStatus(`Slivers ${i.before} → ${i.after} (merged ${i.collapsed}, flipped ${i.flipped})`, i.after ? 'rejected' : 'ok', 5000);
         } catch (e) {
             setStatus(`Sliver fix failed: ${e.message}`, 'error', 6000);
         } finally {
@@ -630,12 +733,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const target = Math.max(20, +targetInput.value || 20);
         const label = { quadriflow: 'Smart retopology', quadric: 'Decimating', isotropic: 'Uniform remeshing' }[reduceMode];
         setStatus(`${label} to ${fmt(target)} faces…`);
+        $('reduceResult').textContent = '';
         $('btnReduce').disabled = true;
         try {
             const res = await api().retopologize(target, reduceMode, $('chkSharp').checked, true);
             if (!res.success) { setStatus(res.error, 'error', 6000); return; }
             showModel(res);
             const i = res.info, d = i.deviation;
+            toast('reduce-result', { kind: d.relative_pct < 5 ? 'ok' : 'warn',
+                title: `Reduced to ${fmt(i.final_faces)} faces`,
+                body: `${i.reduction_percentage}% fewer · ${i.method_used} · deviation max ${d.max_mm} mm (${d.relative_pct}%)`,
+                ms: 12000 });
             const cls = d.relative_pct < 2 ? 'dev-ok' : 'dev-warn';
             $('reduceResult').innerHTML = `${fmt(i.initial_faces)} → <strong>${fmt(i.final_faces)}</strong> faces (${i.method_used}) · ` +
                 `<span class="${cls}">deviation max ${d.max_mm} mm (${d.relative_pct}% of size), mean ${d.mean_mm} mm</span>`;

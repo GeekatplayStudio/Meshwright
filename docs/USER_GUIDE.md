@@ -86,6 +86,19 @@ The **Light** panel moves the key light — useful for reading surface detail be
 
 Drag the divider between viewport and panel to resize; double-click it to reset. The width is remembered.
 
+## Knowing what it is doing
+
+Anything that takes more than a moment announces itself in the bottom-right corner: what it is doing,
+how many faces are involved and roughly how long to expect, with a live timer and progress bar. When
+it finishes, the notification reports the real elapsed time and the outcome. Click **×** to dismiss,
+or leave it — result notifications fade on their own.
+
+The same information, with timestamps, goes to the **Activity console** and to the terminal, so you
+can follow a long run without watching the window.
+
+Estimates scale with the model: repairing two million faces is announced as "about 1–2 minutes",
+while a small part is "a moment".
+
 ## Safety
 
 Every change creates a **numbered state**, shown in the top bar.

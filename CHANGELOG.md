@@ -2,6 +2,26 @@
 
 All notable changes to Meshwright. Format based on [Keep a Changelog](https://keepachangelog.com).
 
+## [1.1.1] — 2026-08-21
+
+### Fixed
+- **Sliver repair tore the mesh.** Edge collapses and flips were applied without checking whether
+  they were topologically valid, so fixing slivers on a closed model could open holes and create
+  non-manifold edges — which the safety guard then (correctly) rejected, making the button look
+  broken. Collapses now require the **link condition** and flips require that the replacement edge
+  does not already exist; a pass that would still worsen the topology is discarded. On a
+  1,994,490-face miniature: 186 slivers → 3, mesh stays watertight, and the 3 it refuses to touch
+  are reported instead of silently forced.
+- Shell colours were washed out by the key light on large models; the palette is now deeper and the
+  material less reflective.
+
+### Added
+- **Progress notifications.** Long operations report the face count and an estimated duration before
+  starting, show a live elapsed timer and progress bar in the bottom-right of the workspace, and
+  report the real elapsed time when they finish. Toasts can be dismissed or left to fade.
+- Result toasts for repair, sliver fixing and reduction, including surface deviation, and a toast
+  when a change is rejected by the safety guard.
+
 ## [1.1.0] — 2026-08-21
 
 ### Added

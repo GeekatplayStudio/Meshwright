@@ -72,6 +72,11 @@ and further remeshing.
 are flipped with their neighbour, so surrounding geometry stays put. The button only appears when
 slivers are present.
 
+Every collapse and flip is checked first: a collapse must satisfy the *link condition* (the two
+endpoints share exactly the two vertices opposite the edge) and a flip must not duplicate an existing
+edge. Slivers that cannot be removed without tearing the surface are left in place and reported —
+a handful of stubborn slivers is far better than a hole. They are harmless for printing.
+
 ## Separate shells — *note*
 
 The file contains several disconnected pieces. Often intentional (a miniature with gems and a base),
