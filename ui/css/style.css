@@ -63,6 +63,13 @@ body.resizing #webgl { pointer-events: none; }
 .viewport-empty svg { width: 56px; height: 56px; opacity: .35; margin-bottom: 6px; }
 .viewport-empty p { font-size: 14px; color: var(--text); opacity: .7; }
 .viewport-empty small { font-size: 11px; letter-spacing: .5px; }
+.viewport-empty small.note { letter-spacing: 0; opacity: .75; margin-top: 2px; }
+.viewport-empty .demo-link {
+    margin-top: 10px; pointer-events: auto; cursor: pointer; font: inherit; font-size: 12px;
+    color: var(--accent-2); background: none; border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 6px 14px;
+}
+.viewport-empty .demo-link:hover { background: var(--bg-3); color: var(--text); }
 .drop-overlay {
     position: absolute; inset: 12px; border: 1.5px dashed var(--accent); border-radius: var(--radius);
     background: rgba(217,164,65,.06); display: flex; align-items: center; justify-content: center;

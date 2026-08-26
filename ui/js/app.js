@@ -332,7 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /* ---------- keyboard shortcuts ---------- */
     const SHORTCUTS = [
-        ['Ctrl+O', 'Open model'], ['Ctrl+S', 'Export STL'], ['Ctrl+Shift+S', 'Save JSON report'],
+        ['Ctrl+O', 'Open model'], ['Ctrl+S', 'Export model'], ['Ctrl+Shift+S', 'Save JSON report'],
         ['Ctrl+Z', 'Undo'], ['Ctrl+Y / Ctrl+Shift+Z', 'Redo'], ['Ctrl+R', 'Repair mesh'], ['Ctrl+U', 'Re-analyse'],
         ['Ctrl+A', 'Select all pieces'], ['Delete', 'Remove selected pieces'], ['R', 'Rotation gizmo'],
         ['F', 'Fit view'], ['W', 'Wireframe'], ['E', 'Open-edge highlight'], ['G', 'Build plate'],
@@ -579,6 +579,26 @@ document.addEventListener('DOMContentLoaded', () => {
         if (path) loadFile(path);
     });
 
+    /* The demo model is built in memory by Python — nothing is downloaded and
+       no file is written. It exists so a fresh install can be tried at once. */
+    $('btnDemo').addEventListener('click', async () => {
+        if (!api()) { setStatus('Desktop bridge not available', 'error', 4000); return; }
+        setStatus('Building the demo model…');
+        openConsole(true);
+        $('report').classList.add('hidden');
+        try {
+            const res = await api().load_demo_model();
+            if (!res.success) { setStatus(res.error, 'error', 6000); return; }
+            showModel(res);
+            setStatus('Demo model loaded — press Repair to see it fixed', 'ok', 5000);
+            toast('demo', { kind: 'info', title: 'Built-in demo model',
+                body: 'A sphere with a hole, a patch of flipped faces and a loose second piece. ' +
+                      'This is a test object, not a printable part.', ms: 9000 });
+        } catch (e) {
+            setStatus(`Failed: ${e.message}`, 'error', 6000);
+        }
+    });
+
     const zone = $('dropZone'), overlay = $('dropOverlay');
     ['dragenter', 'dragover'].forEach(ev => zone.addEventListener(ev, e => { e.preventDefault(); overlay.classList.remove('hidden'); }));
     ['dragleave', 'drop'].forEach(ev => zone.addEventListener(ev, e => { e.preventDefault(); overlay.classList.add('hidden'); }));
@@ -755,15 +775,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    /* A file that is not a closed solid slices as a single-wall shell with no
+       infill, which is invisible until the print is half done — so say it here. */
+    function showExportWarnings(result) {
+        const warnings = result.warnings || [];
+        if (warnings.length === 0) return;   // Python already logged them to the console
+        toast('export-warning', {
+            kind: 'warn',
+            title: result.is_solid ? 'Saved — check this before printing'
+                                   : 'Saved, but this is not a printable solid',
+            body: warnings.join(' '),
+            sticky: true
+        });
+    }
+
     /* ---------- export ---------- */
     $('btnExport').addEventListener('click', async () => {
-        setStatus('Exporting STL…');
+        const format = $('selExportFormat').value;
+        setStatus(`Exporting ${format.toUpperCase()}…`);
         $('btnExport').disabled = true;
         try {
-            const res = await api().export_stl_file($('selUnit').value, $('chkAlign').checked);
+            const res = await api().export_model_file(format, $('selUnit').value, $('chkAlign').checked);
             if (res.canceled) { status.classList.add('hidden'); return; }
             if (!res.success) { setStatus(res.error, 'error', 6000); return; }
             setStatus(`Saved ${res.result.filename} (${res.result.file_size_mb} MB)`, 'ok', 4000);
+            showExportWarnings(res.result);
         } catch (e) {
             setStatus(`Export failed: ${e.message}`, 'error', 6000);
         } finally {

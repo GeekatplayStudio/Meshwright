@@ -14,3 +14,5 @@ _err.txt
 Thumbs.db
 .venv/
 venv/
+install-log.txt
+.meshwright-write-test

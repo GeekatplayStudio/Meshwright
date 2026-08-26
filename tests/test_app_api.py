@@ -177,7 +177,39 @@ def test_export_and_report_through_adapter(tmp_path):
     api.set_window(None)
 
 
+@pytest.mark.parametrize("export_format", ["obj", "ply", "off", "glb", "gltf", "3mf"])
+def test_export_other_formats_through_adapter(tmp_path, export_format):
+    api = _api()
+
+    class Win:
+        def __init__(self, ret): self.ret = ret
+        def create_file_dialog(self, *a, **k): return self.ret
+
+    _load_mesh(api, trimesh.creation.box(), tmp_path, "input.stl")
+    out = str(tmp_path / f"export.{export_format}")
+    api.set_window(Win(out))
+    res = api.export_model_file(export_format, scale_unit="mm", align_origin=True)
+    assert res["success"] and os.path.exists(out)
+    api.set_window(None)
+
+
 def test_no_model_actions():
     api = _api()
     for fn in (api.auto_fix_mesh, api.reduce_mesh_quality, api.undo, api.redo, api.analyze_current):
         assert fn()["success"] is False
+
+
+def test_demo_model_loads_and_is_repairable():
+    """A fresh install must be provable without the user owning a 3D file."""
+    api = _api()
+    res = api.load_demo_model()
+    assert res["success"] is True and res.get("is_demo") is True
+    assert res["stats"]["face_count"] > 100
+    assert res["stats"]["is_watertight"] is False        # it is meant to be broken
+    ids = {i["id"] for i in res["analysis"]["issues"]}
+    assert "holes" in ids
+
+    fixed = api.auto_fix_mesh(True, False)
+    assert fixed["success"] is True
+    assert fixed["analysis"]["score"] > res["analysis"]["score"]
+    assert fixed["stats"]["is_watertight"] is True

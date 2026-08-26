@@ -5,6 +5,11 @@
 Drag a file onto the window, or press <kbd>Ctrl</kbd>+<kbd>O</kbd>.
 Supported: **OBJ, FBX, GLB, GLTF, STL, PLY, 3MF, DAE, OFF, 3DS**.
 
+Meshwright ships no 3D models — it is a workshop for files you already have, so nothing has to be
+downloaded and no model folder has to be configured. To try it without a file of your own, click
+**Load demo model** in the empty viewport: a small object is built in memory with a hole in it, a
+patch of inside-out triangles and a loose second piece, which **Repair** takes to watertight.
+
 Loading shows every step in the **Activity console** (top-right button, or <kbd>Ctrl</kbd>+<kbd>`</kbd>):
 which parser is used, the triangle count, vertex merging, analysis and timings. A two-million-triangle
 model takes roughly 20 seconds.
@@ -64,9 +69,26 @@ you lost. Full guidance in [REDUCTION.md](REDUCTION.md).
 
 ## Exporting
 
-Choose the **source units** of your file (mm, cm or in) so the model is scaled correctly, and leave
-**Rest on build plate** ticked to centre it in X/Y and drop it to Z = 0. **Export STL**
-(<kbd>Ctrl</kbd>+<kbd>S</kbd>) writes a binary STL.
+Pick the **format** — STL, OBJ, PLY, OFF, GLB, glTF or 3MF — and the **source units** of your file
+(mm, cm or in) so the model is scaled correctly, and leave **Rest on build plate** ticked to centre
+it in X/Y and drop it to Z = 0. **Export** (<kbd>Ctrl</kbd>+<kbd>S</kbd>) writes the file; STL is
+binary. Files are named `<original>-GS-<timestamp>-fixed.<ext>` by default, so an export never
+overwrites the model you started from.
+
+### “Saved, but this is not a printable solid”
+
+Meshwright measures the mesh as it writes it and says so when the result is not a closed volume.
+This matters because a slicer fills the **inside** of a solid: an open surface has no inside, so it
+is sliced as a single-wall shell — one perimeter thick, no infill — whatever the infill setting says.
+
+| Warning | What it means | What to do |
+|---|---|---|
+| *not a closed solid — N edges are open* | The mesh is a surface, not a body | Press **Repair**, then export again; the diagnostics must say watertight |
+| *encloses no volume* | The surfaces lie on top of each other | The source model has zero thickness — give it thickness where it was made |
+| *hollow with walls averaging X mm* | It is a genuine shell, thinner than a nozzle can fill | Correct for vase-mode prints; otherwise thicken it |
+
+Inside-out models are turned the right way out on the way to the file, so a mesh a slicer used to
+read as a cavity comes out as a solid.
 
 ## The viewport
 

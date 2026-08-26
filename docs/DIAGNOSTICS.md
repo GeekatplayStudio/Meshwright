@@ -15,6 +15,12 @@ inside from outside and will produce missing walls or a hollow shell.
 *Reported as:* number of holes (closed loops of boundary edges) and total open edges.
 *Fix:* **Repair mesh**. Small holes are triangulated directly; larger ones go to MeshFix or MeshLab.
 
+**In the slicer this is the “thin shell” symptom.** A model with open edges is not a solid, so the
+slicer prints a single wall with no infill — one perimeter thick — no matter what the infill setting
+says. Meshwright repeats the warning when you export, but the diagnostics panel has already told
+you: if this check is present, repair before exporting. A model is only ready when the panel reports
+it as watertight.
+
 ## Non-manifold edges — *critical*
 
 An edge shared by three or more faces. The solid is ambiguous — there is no single "inside".
@@ -97,6 +103,16 @@ The largest dimension is under 1 mm or over 1000 mm — the source file probably
 The file contained no triangles at all. Nothing to print — check the export from your 3D tool.
 
 ---
+
+## Hollow models and wall thickness
+
+Nothing is wrong with a watertight model whose walls are 0.4 mm thick — but a printer cannot fill
+it, so it comes out as a shell. Meshwright estimates the average wall as `2 × volume ÷ surface area`
+when you export, and says so when that falls under 1.2 mm on a model larger than 10 mm.
+
+Usual causes: a surface exported from CAD with no thickness applied, a photogrammetry scan that is a
+skin rather than a body, or a model already hollowed for resin printing (in which case it is
+correct — check that it has drain holes).
 
 ## The readiness score
 

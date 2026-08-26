@@ -2,6 +2,47 @@
 
 All notable changes to Meshwright. Format based on [Keep a Changelog](https://keepachangelog.com).
 
+## [1.2.0] — 2026-08-26
+
+### Fixed
+- **The installer said Python was missing when it was not — and stopped when it really was.**
+  Windows ships a placeholder `python.exe` (App Execution Alias) that prints *"Python was not
+  found; run without arguments to install from the Microsoft Store"* and exits with an error.
+  `install.ps1` ran `python --version` inside a `try/catch`, which never sees a native exit code,
+  so it printed `[OK] Detected`, kept going, and failed one step later with
+  `[ERROR] Could not create the virtual environment.` The installer now *probes* candidates by
+  running them — the py launcher, every `python`/`python3` on `PATH`, the registry entries written
+  by the python.org installer, and the usual install folders including conda and uv — keeps only
+  real 64-bit interpreters that have `venv` and `ensurepip`, prefers the tested 3.10–3.13 series,
+  and when nothing is usable explains how to install Python and how to switch the placeholder off.
+- **One missing wheel aborted the whole installation.** `pip install -r requirements.txt` is
+  all-or-nothing, and several dependencies are compiled extensions with no build for the newest
+  Python for months after its release (`ufbx` has none for 3.13/3.14 and falls back to a source
+  build that needs Visual C++). Required packages now live in `requirements.txt` — all of them
+  pure-wheel installs — and the mesh engines moved to `requirements-optional.txt`, which the
+  installer installs **one at a time**, keeping going and reporting what it skipped.
+- **Exported models could slice as a thin, hollow shell.** An open surface has no inside, so a
+  slicer prints it as a single-wall shell with no infill. Export now measures the result and warns
+  on screen when the file is not a closed solid, when it encloses no volume, or when its walls
+  average under 1.2 mm; inside-out meshes are turned the right way out on the way to the file.
+
+### Added
+- **Load demo model.** Meshwright ships no 3D models and several people expected one to come with
+  it. The empty viewport now says so and offers a built-in test object, built in memory: a sphere
+  with a hole, a patch of flipped faces and a loose second piece — Repair takes it to watertight.
+- `install.bat -Check` reports every Python on the machine and every engine in the environment
+  without changing anything, and every run writes `install-log.txt` for support.
+- `install.bat -Recreate`, `-NoOptional` and `-Python <path>`, plus `scripts/check_install.py`,
+  which prints exactly which engines a copy has.
+- The installer refuses to run from inside a downloaded ZIP or a folder it cannot write to, and
+  explains what to do instead; `start.bat` says to run `install.bat` first instead of falling back
+  to a system Python that may not exist.
+
+### Changed
+- Export offers STL, OBJ, PLY, OFF, GLB, glTF and 3MF, and names files
+  `<original>-GS-<timestamp>-fixed.<ext>`.
+- `numpy` upper bound raised to `<2.6`.
+
 ## [1.1.2] — 2026-08-21
 
 ### Fixed

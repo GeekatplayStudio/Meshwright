@@ -137,7 +137,10 @@ def states() -> str:
 
 @mcp.tool()
 def export_stl(path: str, scale_unit: str = "mm", align_origin: bool = True) -> str:
-    """Write the current mesh as a print-ready binary STL. scale_unit: mm, cm or in (source units)."""
+    """Write the current mesh as a print-ready binary STL. scale_unit: mm, cm or in (source units).
+
+    The result reports is_solid and any warnings: an open surface is sliced by a
+    printer as a single-wall shell with no infill, so repair it before printing."""
     return _call(service.export_stl, path, scale_unit, align_origin)
 
 

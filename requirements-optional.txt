@@ -1,0 +1,22 @@
+# Meshwright — optional engines (Geekatplay Studio)
+#
+# The installer installs these ONE AT A TIME and keeps going if one fails.
+# Every entry is detected at runtime: if it is absent Meshwright drops that
+# specific method and says so, it never crashes (see docs/LICENSES.md).
+#
+# Why they are separate: these are compiled extensions, and a brand-new Python
+# release usually has no ready-made build for a few of them for some months.
+# `pip install -r` is all-or-nothing, so one missing build used to abort the
+# entire installation.
+#
+# Installing them by hand:
+#     .venv\Scripts\python -m pip install -r requirements-optional.txt
+
+pymeshlab>=2023.12         # non-manifold repair, decimation, isotropic remesh   (GPL-3)
+pymeshfix>=0.17            # hole filling, self-intersection repair              (GPL-3)
+manifold3d>=2.3            # guaranteed-manifold solid reconstruction
+fast-simplification>=0.1.7 # fast quadric decimation
+pyQuadriFlow>=0.0.4        # smart quad retopology (QuadriFlow)
+scikit-image>=0.22,<0.27   # marching cubes for the voxel remesh fallback
+ufbx>=0.0.5                # FBX fallback loader (source-only on the newest Pythons)
+mcp>=1.0                   # MCP server (mcp_server.py) for AI assistants

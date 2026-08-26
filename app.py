@@ -102,6 +102,11 @@ class AppApi:
         return self.svc.load(file_path)
 
     @_guarded
+    def load_demo_model(self) -> dict:
+        """Built-in test object, so a fresh install can be tried without a file."""
+        return self.svc.load_demo()
+
+    @_guarded
     def auto_fix_mesh(self, strict_watertight: bool = True, force: bool = False) -> dict:
         return self.svc.repair(strict_watertight, force)
 
@@ -176,7 +181,7 @@ class AppApi:
                 libs[name] = version(dist)
             except PackageNotFoundError:
                 libs[name] = None
-        return {"success": True, "version": "1.1.0", "python": platform.python_version(),
+        return {"success": True, "version": "1.2.0", "python": platform.python_version(),
                 "platform": f"{platform.system()} {platform.release()}", "libraries": libs, "three": "r128"}
 
     @_guarded
@@ -191,12 +196,27 @@ class AppApi:
     # ------------------------------------------------------------------ export
     @_guarded
     def export_stl_file(self, scale_unit: str = "mm", align_origin: bool = True) -> dict:
+        """Backward-compatible entry point for scripts and the MCP examples."""
+        return self.export_model_file("stl", scale_unit, align_origin)
+
+    @_guarded
+    def export_model_file(self, export_format: str = "stl", scale_unit: str = "mm", align_origin: bool = True) -> dict:
         self.svc._require()
-        path = self._save_dialog(self.svc.default_export_name("_print_ready", ".stl"),
-                                 ('STL (*.stl)', 'All files (*.*)'))
+        export_formats = {
+            "stl": ("STL", "*.stl"), "obj": ("Wavefront OBJ", "*.obj"),
+            "ply": ("PLY", "*.ply"), "off": ("OFF", "*.off"),
+            "glb": ("Binary glTF", "*.glb"), "gltf": ("glTF", "*.gltf"),
+            "3mf": ("3MF", "*.3mf"),
+        }
+        fmt = str(export_format).lower()
+        if fmt not in export_formats:
+            raise ValidationError("Export format is not supported.")
+        label, pattern = export_formats[fmt]
+        path = self._save_dialog(self.svc.default_fixed_export_name(f".{fmt}"),
+                                 (f'{label} ({pattern})', 'All files (*.*)'))
         if not path:
             return {"success": False, "canceled": True}
-        return self.svc.export_stl(path, scale_unit, align_origin)
+        return self.svc.export_model(path, fmt, scale_unit, align_origin)
 
     @_guarded
     def export_report(self) -> dict:
@@ -275,8 +295,22 @@ def main():
 
     window.events.loaded += on_loaded
     window.events.closing += on_closing
-    webview.start(debug=False)
+    try:
+        webview.start(debug=False)
+    except Exception as exc:
+        # The window itself failed to open — almost always a missing web view
+        # runtime rather than anything to do with meshes. Say which.
+        print("", flush=True)
+        print(f"Meshwright could not open its window: {exc}", flush=True)
+        print("", flush=True)
+        print("On Windows this normally means the Microsoft Edge WebView2 runtime is missing.", flush=True)
+        print("Install the free 'Evergreen Bootstrapper' from:", flush=True)
+        print("  https://developer.microsoft.com/microsoft-edge/webview2/", flush=True)
+        print("then start Meshwright again.", flush=True)
+        traceback.print_exc()
+        return 1
+    return 0
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())

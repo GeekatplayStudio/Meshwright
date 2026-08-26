@@ -14,7 +14,7 @@
                         └───────────┬────────────┘
                                     ▼
    ┌──────────────┬────────────┬────────────┬─────────────┬──────────────┐
-   │ model_loader │ mesh_      │ mesh_      │ mesh_       │ stl_exporter │
+   │ model_loader │ mesh_      │ mesh_      │ mesh_       │ mesh_exporter│
    │              │ analysis   │ repair     │ retopo /    │              │
    │              │            │ cleanup    │ reducer     │              │
    └──────────────┴────────────┴────────────┴─────────────┴──────────────┘
@@ -61,7 +61,9 @@ expectations, never to decide anything.
 | `engine/mesh_cleanup.py` | Sliver removal: needle collapse and cap flipping |
 | `engine/mesh_retopo.py` | QuadriFlow / isotropic / quadric reduction, per piece, verified |
 | `engine/mesh_reducer.py` | Ratio-based quadric decimation with topology-safe fallback |
-| `engine/stl_exporter.py` | Unit scaling, build-plate alignment, binary STL |
+| `engine/mesh_exporter.py` | Unit scaling, winding fix, build-plate alignment, solidity check, seven output formats |
+| `engine/stl_exporter.py` | Thin STL-only wrapper kept for older scripts |
+| `engine/demo_model.py` | The built-in broken test object offered on an empty viewport |
 | `ui/js/viewer.js` | Three.js viewport: geometry, shading, highlights, compass, gizmo |
 | `ui/js/app.js` | Panels, console, shortcuts, state UI, dialogs |
 

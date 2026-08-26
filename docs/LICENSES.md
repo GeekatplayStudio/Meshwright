@@ -38,8 +38,9 @@ present on your machine.
   fast-simplification. The About panel shows which engines are actually present.
 
 To build a fully permissive distribution, omit `pymeshlab` and `pymeshfix` from
-`requirements.txt`. Expect weaker results on badly broken meshes and on retopology of
-topologically complex models, where MeshFix is what repairs QuadriFlow's output.
+`requirements-optional.txt` (or install with `install.bat -NoOptional`). Expect weaker results on
+badly broken meshes and on retopology of topologically complex models, where MeshFix is what
+repairs QuadriFlow's output.
 
 ## Attribution
 

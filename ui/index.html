@@ -44,6 +44,8 @@
                 </svg>
                 <p>Drop a model here or open one</p>
                 <small>OBJ · FBX · GLB · GLTF · STL · PLY · 3MF · DAE · OFF</small>
+                <small class="note">Meshwright has no model of its own — it works on your files.</small>
+                <button id="btnDemo" class="demo-link" title="Build a small broken test object in memory">Load demo model</button>
             </div>
 
             <div class="drop-overlay hidden" id="dropOverlay"><span>Release to load</span></div>
@@ -204,6 +206,18 @@
                 <section class="card">
                     <h2>Export</h2>
                     <div class="row two">
+                        <label>Format
+                            <select id="selExportFormat">
+                                <option value="stl">STL</option>
+                                <option value="obj">OBJ</option>
+                                <option value="ply">PLY</option>
+                                <option value="off">OFF</option>
+                                <option value="glb">GLB</option>
+                                <option value="gltf">glTF</option>
+                                <option value="3mf">3MF</option>
+                                <option value="fbx" disabled>FBX (not available)</option>
+                            </select>
+                        </label>
                         <label>Source units
                             <select id="selUnit">
                                 <option value="mm">Millimetres</option>
@@ -213,7 +227,7 @@
                         </label>
                         <label class="check"><input type="checkbox" id="chkAlign" checked><span>Rest on build plate</span></label>
                     </div>
-                    <button id="btnExport" class="btn btn-primary wide" disabled>Export STL</button>
+                    <button id="btnExport" class="btn btn-primary wide" disabled>Export</button>
                 </section>
 
                 <!-- View -->
@@ -249,7 +263,7 @@
         <section>
             <h3>What it does</h3>
             <p>Meshwright takes any common 3D model, tells you exactly why it would fail on a 3D printer, fixes it while
-            reporting what changed, and exports a print-ready binary STL resting on the build plate.</p>
+            reporting what changed, and exports a print-ready model resting on the build plate.</p>
         </section>
 
         <section>
@@ -260,7 +274,7 @@
                 <li><strong>Repair</strong> &mdash; a staged pipeline where each stage is measured and kept only if it helps: cleanup &rarr; orientation &rarr; small-hole filling &rarr; MeshFix &rarr; MeshLab non-manifold repair &rarr; Manifold3D solid reconstruction &rarr; voxel remesh as last resort. It re-runs until the mesh stops changing, then re-analyses the final result.</li>
                 <li><strong>Refine</strong> &mdash; sliver triangles are merged into larger neighbours (needles collapsed, caps flipped); polygon count is reduced three ways &mdash; QuadriFlow smart retopology (clean curvature-aligned quads, true low-poly), uniform isotropic remeshing, or topology-preserving quadric collapse &mdash; always with the measured surface deviation; separate pieces can be highlighted and removed; the model can be rotated with a gizmo or in 90&deg; steps.</li>
                 <li><strong>Safeguards</strong> &mdash; every change is a numbered state with undo/redo. A change that would add critical problems or discard most of the geometry is rejected unless you apply it anyway. Every state is snapshotted in the background so a crash can be recovered on the next start.</li>
-                <li><strong>Export</strong> &mdash; binary STL with unit scaling and build-plate alignment, plus a JSON report of the diagnostics and every operation applied.</li>
+                <li><strong>Export</strong> &mdash; STL (binary), OBJ, PLY, OFF, GLB, glTF or 3MF with unit scaling and build-plate alignment, plus a JSON report of the diagnostics and every operation applied. The result is measured as it is written: inside-out models are turned the right way out, and a file that is not a closed solid says so &mdash; a slicer prints an open surface as a single-wall shell with no infill.</li>
             </ol>
         </section>
 

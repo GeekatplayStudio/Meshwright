@@ -15,6 +15,9 @@ npm install                 # vendors Three.js, installs eslint
 Always work inside the `.venv`. Meshwright depends on numpy, scipy and several compiled mesh
 libraries; installing them into a shared interpreter can upgrade numpy underneath other projects.
 Keep the bounds in `requirements.txt` — an unbounded `numpy>=x` is how that happens.
+`requirements.txt` must also stay installable with no compiler present on every supported
+Python: anything that builds from source, or that lags a new Python release, belongs in
+`requirements-optional.txt`, which the installer adds one package at a time and may skip.
 
 Three.js is vendored into `ui/vendor/` by `npm install` (see `install.ps1`). If the viewport is
 blank, re-run the installer — the app never loads scripts from a CDN, so it works offline.

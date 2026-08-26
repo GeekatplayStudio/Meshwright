@@ -22,12 +22,13 @@ from trimesh.grouping import group_rows
 
 from engine import validation as V
 from engine.model_loader import load_model
+from engine.demo_model import DEMO_NAME, build_demo_mesh
 from engine.mesh_analysis import analyze_mesh
 from engine.mesh_repair import repair_mesh
 from engine.mesh_reducer import reduce_mesh
 from engine.mesh_cleanup import fix_slivers
 from engine.mesh_retopo import retopologize, deviation
-from engine.stl_exporter import export_to_stl
+from engine.mesh_exporter import EXPORT_FORMATS, export_to_format
 from engine.session_store import SessionStore
 
 MAX_SHELLS = 200
@@ -254,6 +255,34 @@ class MeshService:
             self.log(f"Ready in {elapsed:.2f}s total", "ok")
             return res
 
+    def load_demo(self) -> dict:
+        """
+        Load the built-in test object.
+
+        Meshwright ships no models, so a fresh install has nothing to look at
+        until you open one of your own files. This gives every install something
+        to prove itself on: a deliberately broken object that Repair can fix.
+        """
+        with self.lock:
+            self.progress(state="start", operation="load", label="Loading the demo model",
+                          faces=0, eta=1.0, eta_text="a moment")
+            t0 = time.perf_counter()
+            mesh = build_demo_mesh()
+            self.file_path = DEMO_NAME
+            self.original = mesh.copy()
+            self._states.clear()
+            self._redo.clear()
+            self.history.clear()
+            if self.store:
+                self.store.set_source(DEMO_NAME)
+            self.log("Loaded the built-in demo model: a sphere with a hole, "
+                     "flipped faces and a loose second piece. Try Repair on it.", "ok")
+            res = self._commit(mesh, "load", guard=False)
+            self.progress(state="done", operation="load", label="Loaded the demo model",
+                          elapsed=round(time.perf_counter() - t0, 2))
+            res["is_demo"] = True
+            return res
+
     def analyze(self) -> dict:
         with self.lock:
             st = self._require()
@@ -448,14 +477,20 @@ class MeshService:
 
     # ---------------------------------------------------------------- export
     def export_stl(self, path: str, scale_unit="mm", align_origin=True) -> dict:
+        return self.export_model(path, "stl", scale_unit, align_origin)
+
+    def export_model(self, path: str, export_format="stl", scale_unit="mm", align_origin=True) -> dict:
         with self.lock:
             st = self._require()
-            p = V.output_path(path, ".stl")
+            fmt = V.choice(export_format, "export_format", tuple(EXPORT_FORMATS), "stl")
+            p = V.output_path(path, f".{fmt}")
             unit = V.choice(scale_unit, "scale_unit", ("mm", "cm", "in"), "mm")
             with self._job("export", f"Exporting {os.path.basename(p)}"):
-                res = export_to_stl(st.mesh, p, scale_unit=unit, align_origin=V.boolean(align_origin, True))
+                res = export_to_format(st.mesh, p, fmt, scale_unit=unit, align_origin=V.boolean(align_origin, True))
             self.log(f"Saved {res['file_size_mb']} MB, {res['face_count']:,} faces", "ok")
-            self.history.append({"operation": "export_stl", "path": p, "time": time.strftime("%H:%M:%S")})
+            for w in res.get("warnings", []):
+                self.log(w, "warn")
+            self.history.append({"operation": f"export_{fmt}", "path": p, "time": time.strftime("%H:%M:%S")})
             return {"success": True, "result": res}
 
     def report(self) -> dict:
@@ -486,6 +521,12 @@ class MeshService:
     def default_export_name(self, suffix: str, ext: str) -> str:
         base = os.path.splitext(os.path.basename(self.file_path))[0] if self.file_path else "model"
         return f"{base}{suffix}{ext}"
+
+    def default_fixed_export_name(self, ext: str) -> str:
+        """Default mesh export name: original-GS-YYYYMMDD-HHMMSS-fixed.ext."""
+        base = os.path.splitext(os.path.basename(self.file_path))[0] if self.file_path else "model"
+        timestamp = time.strftime("%Y%m%d-%H%M%S")
+        return f"{base}-GS-{timestamp}-fixed{ext}"
 
     # ---------------------------------------------------------------- preview
     @staticmethod

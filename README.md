@@ -12,10 +12,10 @@ by [Geekatplay Studio](https://www.geekatplay.com) · Vladimir Chopine
 [![License](https://img.shields.io/badge/license-MIT-d9a441.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-3776ab.svg)](https://python.org)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-6ea8fe.svg)](#install)
-[![Tests](https://img.shields.io/badge/tests-54%20passing-4cc38a.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-68%20passing-4cc38a.svg)](tests/)
 [![MCP](https://img.shields.io/badge/MCP-ready-b06bd0.svg)](docs/MCP.md)
 
-[**☕ Support development**](https://geekatplay.gumroad.com/coffee) · [Quick start](#quick-start) · [Features](#what-it-does) · [Docs](docs/) · [MCP server](docs/MCP.md)
+[**☕ Support development**](https://geekatplay.gumroad.com/coffee) · [Quick start](#quick-start) · [Features](#what-it-does) · [Docs](docs/) · [MCP server](docs/MCP.md) · [Troubleshooting](#troubleshooting)
 
 </div>
 
@@ -40,11 +40,19 @@ Most "mesh repair" tools give you a spinner and a green tick. Meshwright tells y
 | Mistakes | Overwrites your model | Numbered states, **Ctrl+Z / Ctrl+Y**, explicit revert |
 | Crash | Work lost | Background snapshots, **recovery offered on next start** |
 | Reduction | One decimation slider | **QuadriFlow smart retopology**, uniform remesh, or quadric collapse — with measured surface deviation |
+| Export | "Here is your STL" | Seven formats, and it **says when the file is not a solid** — the shell that slices with no infill |
 | Automation | GUI only | **MCP server** + Python API on the identical engine |
 
 ---
 
 ## Quick start
+
+1. Install **Python 3.10 or newer** from [python.org](https://www.python.org/downloads/windows/) —
+   tick **“Add python.exe to PATH”** in the installer. Python 3.12 is the version Meshwright is
+   tested against.
+2. Download Meshwright and **extract the ZIP to a normal folder** such as `C:\Meshwright`
+   (running it from inside the ZIP installs into a folder Windows later deletes).
+3. Run `install.bat`, then `start.bat`.
 
 ```bash
 git clone https://github.com/GeekatplayStudio/Meshwright.git
@@ -53,7 +61,11 @@ install.bat          # or:  .\install.ps1
 start.bat            # or:  .\start.ps1
 ```
 
-Requires **Python 3.10+**. Node.js is optional (linting and refreshing the vendored Three.js).
+Node.js is optional (linting and refreshing the vendored Three.js).
+
+**Meshwright does not come with a 3D model** — it is a workshop for the files you already have.
+Drop one onto the window, press <kbd>Ctrl</kbd>+<kbd>O</kbd>, or click **Load demo model** in the
+empty viewport to try everything on a built-in broken test object.
 
 > **The installer creates an isolated `.venv` inside the project folder.** Meshwright pulls in
 > numpy, scipy and several mesh libraries; installing those into a shared Python can silently
@@ -61,15 +73,33 @@ Requires **Python 3.10+**. Node.js is optional (linting and refreshing the vendo
 > and `start.ps1` use that `.venv` automatically. Pass `-Global` to `install.ps1` if you really
 > want it in your system Python.
 
+Installer options:
+
+| Command | What it does |
+|---|---|
+| `install.bat` | Normal install into `.venv` |
+| `install.bat -Check` | Reports every Python on the machine and what is installed — changes nothing |
+| `install.bat -Recreate` | Deletes `.venv` and builds it again from scratch |
+| `install.bat -NoOptional` | Required packages only, no extra mesh engines |
+| `install.bat -Python "C:\Path\to\python.exe"` | Use one specific interpreter |
+
+Every run writes `install-log.txt` next to `install.bat`; that file is what to send if you need help.
+
 Installing by hand into an environment of your own:
 
 ```bash
 python -m venv .venv
 .venv\Scripts\python -m pip install -r requirements.txt
+.venv\Scripts\python -m pip install -r requirements-optional.txt   # extra mesh engines
 .venv\Scripts\python app.py
 ```
 
-Drop a model onto the window, or press <kbd>Ctrl</kbd>+<kbd>O</kbd>.
+`requirements.txt` holds only packages that install with no compiler on every supported Python.
+The engines in `requirements-optional.txt` are compiled extensions, and a brand-new Python release
+often has no ready-made build for one or two of them; the installer adds them **one at a time** and
+skips any that fail, so a single missing build can never abort the installation. Whatever is absent
+is simply not offered inside the program — run `.venv\Scripts\python scripts\check_install.py` to
+see exactly what your copy has.
 
 ---
 
@@ -155,7 +185,13 @@ followed from the terminal.
 
 ### 7 · Export
 
-Binary STL with source-unit scaling (mm / cm / in) and build-plate alignment, plus a **JSON report** of the diagnostics and every operation applied — good for client sign-off or a print-farm audit trail.
+STL, OBJ, PLY, OFF, GLB, glTF or 3MF with source-unit scaling (mm / cm / in) and build-plate
+alignment, plus a **JSON report** of the diagnostics and every operation applied — good for client
+sign-off or a print-farm audit trail.
+
+Meshwright checks the mesh as it writes it, and says so on screen when the file **is not a closed
+solid**: an open surface makes a slicer produce a single-wall shell with no infill, no matter what
+the slicer settings say. Inside-out models are turned the right way out on the way to the file.
 
 ---
 
@@ -213,7 +249,10 @@ Every input is validated, every call is guarded and undoable. See **[docs/MCP.md
 ## Supported formats
 
 **In** — OBJ · FBX · GLB · GLTF · STL · PLY · 3MF · DAE · OFF · 3DS
-**Out** — binary STL · JSON report
+**Out** — STL (binary) · OBJ · PLY · OFF · GLB · glTF · 3MF · JSON report
+
+Every export is unit-scaled, rested on the build plate, checked for solidity and named
+`<original>-GS-<timestamp>-fixed.<ext>`, so it never overwrites what you opened.
 
 ---
 
@@ -261,6 +300,80 @@ Meshwright is a careful integration of the best open mesh libraries. Full credit
 
 ---
 
+## Troubleshooting
+
+### “Python was not found; run without arguments to install from the Microsoft Store”
+
+Windows ships a **placeholder** `python.exe` that only prints that message. It is on `PATH` out of
+the box, so it looks like Python is installed when nothing is. Any one of these fixes it:
+
+- Install Python from [python.org](https://www.python.org/downloads/windows/) and tick
+  **“Add python.exe to PATH”** in the first screen of the installer. Then open a **new** window and
+  run `install.bat` again — an already-open window keeps the old `PATH`.
+- Or switch the placeholder off: **Settings → Apps → Advanced app settings → App execution
+  aliases**, turn off **python.exe** and **python3.exe**.
+- Already have Python somewhere unusual? Point the installer at it:
+  `install.bat -Python "C:\Path\to\python.exe"`
+
+`install.bat -Check` lists every interpreter Meshwright can find on the machine, which is the
+quickest way to see what is really there.
+
+### “[ERROR] Could not create the virtual environment”
+
+Older versions printed this straight after the message above, because they believed the
+placeholder was Python. The current installer tests each interpreter by running it, so this now
+means something else — the message says which:
+
+- **The folder cannot be written to.** Move Meshwright out of `Program Files`, out of a
+  read-only share, and preferably out of OneDrive, into something like `C:\Meshwright`.
+- **The install is running from inside the ZIP.** Extract it first: right-click the ZIP →
+  *Extract All…*. Double-clicking `install.bat` inside a ZIP unpacks a copy into a temporary
+  folder that Windows deletes later.
+- **A half-finished `.venv` is in the way.** Run `install.bat -Recreate`.
+
+### The install ends with “Engines skipped: …”
+
+That is not a failure. Those engines are compiled extensions, and a Python released a few weeks ago
+usually has no ready-made build for one or two of them yet. Meshwright runs and reports which
+repair or retopology methods are unavailable; installing **Python 3.12** and running
+`install.bat -Recreate` gets the complete set.
+
+### Meshwright opened, but there is no model
+
+Meshwright ships no 3D models — nothing to download, no folder to point it at. It works on the
+files you already have: **Open model**, <kbd>Ctrl</kbd>+<kbd>O</kbd>, or drag a file onto the
+window. To try it immediately, click **Load demo model** in the empty viewport; that builds a small
+deliberately broken object in memory so you can watch the diagnostics and the repair work.
+
+The black terminal window that opens next to it is the activity log. Keep it open — closing it
+closes Meshwright.
+
+### The exported STL slices as a thin shell — one layer, no infill
+
+The slicer is right: the file is a **surface**, not a solid. A slicer fills the inside of a closed
+volume; an open surface has no inside, so it becomes a single-wall shell however the infill is set.
+
+Meshwright now says this out loud when it writes the file (“Saved, but this is not a printable
+solid”), and the diagnostics panel flags it before that — look for **open holes** or
+**boundary edges**, and the readiness score will be low. The fix is to press **Repair** and export
+again; the panel must say *watertight* for a slicer to treat the model as solid.
+
+Two related cases the export warning also covers:
+
+- **“The model is hollow with walls averaging 0.4 mm.”** The model really is a shell — often a
+  scan, or a surface exported from a CAD program with zero thickness. Give it thickness in the
+  program it came from, or use the slicer’s vase/spiral mode deliberately.
+- **Inside-out models.** Meshwright turns the winding the right way out as it exports, so a mesh
+  the slicer used to read as a cavity comes out as a solid.
+
+### Something else
+
+Every install writes `install-log.txt` next to `install.bat`, and
+`.venv\Scripts\python scripts\check_install.py` prints exactly which engines your copy has. Those
+two outputs are what to attach to a bug report.
+
+---
+
 ## Development
 
 ```bash
@@ -268,13 +381,14 @@ python -m venv .venv
 .venv\Scripts\python -m pip install -r requirements-dev.txt
 npm install       # vendors Three.js into ui/vendor and installs eslint
 
-npm test          # pytest, 54 tests
+npm test          # pytest, 68 tests
 npm run lint      # eslint + ruff
 npm run mcp       # start the MCP server
 ```
 
-Dependency versions in `requirements.txt` are deliberately bounded (`numpy>=1.26,<2.4` and so on) so
-an install can never drag a shared environment to an incompatible version.
+Dependency versions in `requirements.txt` are deliberately bounded (`numpy>=1.26,<2.6` and so on) so
+an install can never drag a shared environment to an incompatible version. Anything that needs a
+compiler belongs in `requirements-optional.txt`, never in `requirements.txt`.
 
 ---
 

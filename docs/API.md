@@ -12,7 +12,10 @@ print(svc.current.analysis["verdict"])  # 'Repair required'
 svc.repair()                            # measured, verified, undoable
 svc.fix_slivers(min_angle_deg=1.0)
 svc.retopo(20000, method="quadriflow")
-svc.export_stl("miniature_print_ready.stl", scale_unit="mm", align_origin=True)
+result = svc.export_model("miniature_print_ready.stl", "stl", scale_unit="mm", align_origin=True)
+for warning in result["result"]["warnings"]:
+    print(warning)                      # e.g. 'not a closed solid - 412 edges are open'
+
 svc.export_report("miniature_report.json")
 svc.close()                             # clears the crash-recovery snapshots
 ```
@@ -43,6 +46,7 @@ MeshService(log=None, autosave=True, progress=None)
 | Method | Returns |
 |---|---|
 | `load(path)` | Full result: analysis, stats, shells, preview, state id |
+| `load_demo()` | The same, for the built-in test object — no file needed |
 | `analyze()` | Fresh diagnostics for the current mesh |
 | `repair(strict_watertight=True, force=False)` | Result + `report` with `fixes`, `changes`, `passes` |
 | `fix_slivers(min_angle_deg=1.0, force=False)` | Result + `info` (`before`, `after`, `collapsed`, `flipped`, `skipped`) |
@@ -52,8 +56,24 @@ MeshService(log=None, autosave=True, progress=None)
 | `rotate(matrix)` | `stats`, `centre`, `bounds` — no geometry payload |
 | `undo()` / `redo()` / `revert()` | Result for the state you land on |
 | `state_list()` | `[{id, operation, verdict, score, faces}, …]` |
-| `export_stl(path, scale_unit="mm", align_origin=True)` | `{"result": {...}}` |
+| `export_model(path, export_format="stl", scale_unit="mm", align_origin=True)` | `{"result": {...}}` — format is stl, obj, ply, off, glb, gltf or 3mf |
+| `export_stl(path, scale_unit="mm", align_origin=True)` | The same, fixed to STL |
 | `report()` / `export_report(path)` | The full JSON report |
+
+### What an export returns
+
+`result["result"]` describes the file that was written, and answers the question a slicer cannot ask:
+
+| Key | |
+|---|---|
+| `is_solid` | `True` only when the mesh is watertight **and** encloses a volume |
+| `is_watertight`, `volume_cm3`, `avg_wall_mm` | The measurements behind that verdict |
+| `warnings` | Plain-English problems: not a closed solid, no volume, walls too thin to fill |
+| `format`, `filename`, `file_size_mb`, `face_count`, `vertex_count` | The file itself |
+| `dimensions_mm`, `bounds_min`, `bounds_max` | After unit scaling and build-plate alignment |
+
+An open surface is sliced as a single-wall shell with no infill, so treat a non-empty `warnings`
+list as a failed print waiting to happen. Inside-out meshes are corrected during export.
 
 ## Properties
 
@@ -110,7 +130,7 @@ from engine.mesh_repair   import repair_mesh
 from engine.mesh_cleanup  import fix_slivers
 from engine.mesh_retopo   import retopologize, deviation
 from engine.mesh_reducer  import reduce_mesh
-from engine.stl_exporter  import export_to_stl
+from engine.mesh_exporter import export_to_format, solidity_report
 from engine.model_loader  import load_model
 ```
 
