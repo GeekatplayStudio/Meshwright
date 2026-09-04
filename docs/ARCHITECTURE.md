@@ -314,8 +314,19 @@ answer is a bounded wait and a good fallback rather than tuning.
 
 ## The walking cup
 
-`ui/js/walker.js` hangs off the progress events the engine already emits, so it turns
-up for loads, repairs, reductions and exports without any of them knowing it exists.
+`ui/js/walker.js` hangs off the progress events the engine already emits, so nothing
+in the engine knows he exists. `WALKS_FOR` in `ui/js/app.js` picks the two he turns out
+for — `load` and `export`, plus `bake_glb`, which is an export by another name. Every
+long job emits progress, and hanging him off all of them put him on screen for most of
+a session, which makes him scenery rather than a signal; the rest show the progress
+toast, which is what you watch when you are waiting on a step rather than on the file.
+The gate has to cover the stop as well as the start, or a repair finishing counts down
+the load he is actually walking for.
+
+Those operation names are a string contract across the two languages, so a rename in
+`service.py` would not break loudly — the cup would just stop turning up, which nobody
+would report as a bug. `tests/test_walker_states.py` checks the set against the jobs the
+engine really emits.
 
 Two details are worth keeping if it is ever touched. The sprite is an image eight
 frames wide translated inside a one-frame window, not a `background-position`

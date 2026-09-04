@@ -12,7 +12,7 @@ by [Geekatplay Studio](https://www.geekatplay.com) · Vladimir Chopine
 [![License](https://img.shields.io/badge/license-MIT-d9a441.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-3776ab.svg)](https://python.org)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-6ea8fe.svg)](#install)
-[![Tests](https://img.shields.io/badge/tests-283%20passing-4cc38a.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-286%20passing-4cc38a.svg)](tests/)
 [![MCP](https://img.shields.io/badge/MCP-ready-b06bd0.svg)](docs/MCP.md)
 
 [**☕ Support development**](https://geekatplay.gumroad.com/coffee) · [Quick start](#quick-start) · [Features](#what-it-does) · [Docs](docs/) · [MCP server](docs/MCP.md) · [Troubleshooting](#troubleshooting)
@@ -190,9 +190,10 @@ Everything also goes to the activity console with timestamps, and to stdout, so 
 
 ### 9 · Someone to wait with
 
-While the engine is busy a small cup strolls along the bottom of the window and
-leaves when the work is done, so you can see at a glance that something is still
-happening. Click him and he stops to ask whether you would like to buy Vlad a coffee.
+Opening a model and writing one out are the two waits worth watching, so that is when
+a small cup strolls along the bottom of the window — and he leaves when the work is
+done. Everything else shows its progress in the corner instead. Click him and he stops
+to ask whether you would like to buy Vlad a coffee.
 
 <div align="center">
 <img src="docs/images/15-walker.png" width="900" alt="The cup character walking along the bottom of the window, with a speech balloon">
@@ -424,7 +425,7 @@ python -m venv .venv
 .venv\Scripts\python -m pip install -r requirements-dev.txt
 npm install       # vendors Three.js into ui/vendor and installs eslint
 
-npm test          # pytest, 283 tests
+npm test          # pytest, 286 tests
 npm run lint      # eslint + ruff
 npm run mcp       # start the MCP server
 ```

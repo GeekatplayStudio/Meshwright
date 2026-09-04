@@ -15,8 +15,10 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 WALKER = ROOT / "ui" / "js" / "walker.js"
+APP_JS = ROOT / "ui" / "js" / "app.js"
 STYLE = ROOT / "ui" / "css" / "style.css"
 STRIP = ROOT / "ui" / "assets" / "walk" / "walk-strip.png"
+ENGINE = (ROOT / "engine" / "service.py", ROOT / "engine" / "texture_service.py")
 
 # The three places he can be. They drive different animations, so he must never
 # wear two at once.
@@ -31,6 +33,18 @@ def js():
 @pytest.fixture(scope="module")
 def css():
     return STYLE.read_text(encoding="utf-8")
+
+
+@pytest.fixture(scope="module")
+def app_js():
+    return APP_JS.read_text(encoding="utf-8")
+
+
+@pytest.fixture(scope="module")
+def walks_for(app_js):
+    """The operations that bring him out, as ui/js/app.js lists them."""
+    listed = re.search(r"WALKS_FOR\s*=\s*new Set\(\[([^\]]*)\]\)", app_js).group(1)
+    return set(re.findall(r"'([^']+)'", listed))
 
 
 def body(source, name):
@@ -85,6 +99,51 @@ def test_the_exit_animation_hands_back_to_the_walk(js):
     assert "walker-exit" in handler, "nothing watches for the exit animation ending"
     assert "resuming" in handler and "leaving" in handler, \
         "the animationend handler does not distinguish resuming from leaving"
+
+
+# ------------------------------------------------------------- when he turns out
+def test_he_walks_for_the_model_not_for_every_step(walks_for):
+    """
+    Every long operation emits progress. He is only company for the waits that are
+    about the model as a whole — opening one and writing one out. Hanging him off all
+    of them put him on screen for most of a session, which makes him scenery instead
+    of a signal that something is happening.
+    """
+    assert walks_for == {"load", "export", "bake_glb"}, (
+        f"he now turns out for {sorted(walks_for)}; repairs, reductions, unwraps and "
+        f"previews are meant to show the progress toast and nothing else"
+    )
+
+
+def test_starting_and_stopping_agree_on_that_set(app_js):
+    """
+    If the gate covered only `start`, a repair finishing would count down the load he
+    is actually walking for and send him off mid-model.
+    """
+    handler = app_js[app_js.index("function onProgress("):]
+    handler = handler[:handler.index("\n    }")]
+    gate = handler.index("WALKS_FOR.has(")
+    for call in ("walker().start(", "walker().stop()"):
+        assert handler.index(call) > gate, f"{call} is not behind the WALKS_FOR gate"
+
+
+def test_the_operations_he_waits_on_are_ones_the_engine_emits(walks_for):
+    """
+    The names are a contract between Python and the browser, matched as strings. A
+    rename on the engine side would not break anything loudly — the cup would simply
+    stop turning up, which nobody would report as a bug.
+    """
+    emitted = set()
+    for path in ENGINE:
+        source = path.read_text(encoding="utf-8")
+        emitted |= set(re.findall(r"_job\(\s*[\"']([a-z_]+)[\"']", source))
+        emitted |= set(re.findall(r"operation=[\"']([a-z_]+)[\"']", source))
+
+    missing = walks_for - emitted
+    assert not missing, (
+        f"app.js waits on {sorted(missing)}, which no engine job reports — "
+        f"the engine emits {sorted(emitted)}"
+    )
 
 
 # ------------------------------------------------------------------ the balloon

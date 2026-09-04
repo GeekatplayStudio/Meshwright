@@ -185,11 +185,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /* Called from Python for every long operation. */
-    /* The cup who walks along the bottom while the engine works. */
+    /* The cup who walks along the bottom while the engine works.
+
+       He turns out for the two waits that are about the model as a whole — opening
+       one and writing one out — and not for the rest. Every long job emits progress,
+       and putting him on all of them meant he was walking most of the time a model
+       was open, which makes him scenery rather than a signal. The repairs, reductions
+       and unwraps still have their progress toast, which is the thing you watch when
+       you are waiting on a step rather than on the file. */
     const walker = () => window.meshwrightWalker;
+    const WALKS_FOR = new Set(['load', 'export', 'bake_glb']);
 
     function onProgress(ev) {
-        if (walker()) {
+        // start and stop have to agree on the set, or a job he ignored would still
+        // count down the one he is actually walking for.
+        if (walker() && WALKS_FOR.has(ev.operation)) {
             if (ev.state === 'start') walker().start(ev.label);
             else walker().stop();
         }

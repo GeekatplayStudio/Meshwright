@@ -5,9 +5,11 @@ All notable changes to Meshwright. Format based on [Keep a Changelog](https://ke
 ## [Unreleased]
 
 ### Added
-- **A cup who waits with you.** While the engine is busy, a hand-drawn cup strolls along the bottom
-  of the window and leaves when the work is done. Click him and he stops, under a speech balloon,
-  to ask whether you would like to buy Vlad a coffee.
+- **A cup who waits with you.** Opening a model or writing one out sends a hand-drawn cup strolling
+  along the bottom of the window; he leaves when the work is done. Repairs, reductions, unwraps and
+  previews keep their progress toast and nothing more — he is on screen for the waits that are about
+  the file itself, because a character who turns out for everything is scenery rather than a signal.
+  Click him and he stops, under a speech balloon, to ask whether you would like to buy Vlad a coffee.
 
   He is animated from an eight-frame walk sheet cut by `scripts/build_walk_frames.py`, which lifts
   the background without hollowing out a character drawn in white, checks the cycle order against
