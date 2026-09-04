@@ -1,7 +1,8 @@
 import numpy as np
 import trimesh
-from engine.mesh_retopo import retopologize, deviation, HAS_QUADRIFLOW
+
 from engine.mesh_analysis import analyze_mesh
+from engine.mesh_retopo import HAS_QUADRIFLOW, deviation, retopologize
 from engine.service import MeshService
 
 
@@ -56,6 +57,7 @@ def test_service_retopo_validates_and_commits(tmp_path):
     assert res["stats"]["face_count"] < n * 0.1
     assert "deviation" in res["info"]
     import pytest
+
     from engine.validation import ValidationError
     with pytest.raises(ValidationError):
         svc.retopo(500, method="magic")

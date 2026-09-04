@@ -34,6 +34,8 @@ class ModelViewer {
         this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
         this.controls.enableDamping = true;
         this.controls.dampingFactor = 0.08;
+        this.needsRender = true;
+        this.controls.addEventListener('change', () => { this.needsRender = true; });
 
         this.scene.add(new THREE.HemisphereLight(0xdfe6f0, 0x2a2420, 0.55));
         this.key = new THREE.DirectionalLight(0xfff4e0, 1.2);
@@ -52,7 +54,16 @@ class ModelViewer {
             normals: new THREE.MeshNormalMaterial({ side: THREE.DoubleSide }),
             xray: new THREE.MeshBasicMaterial({ color: 0x9fc4ff, transparent: true, opacity: 0.18, side: THREE.DoubleSide, depthWrite: false }),
             shells: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92, metalness: 0.0, side: THREE.DoubleSide }),
+            pbr: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5, metalness: 0.05, side: THREE.DoubleSide }),
+            albedo: new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide }),
+            normal_map: new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide }),
+            roughness_map: new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide }),
+            metallic_map: new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide }),
+            ao_map: new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide }),
+            height_map: new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide }),
         };
+        this.textureData = null;
+        this.displaceMm = 0;
 
         new ResizeObserver(() => this.resize()).observe(this.container);
         this.animate();
@@ -60,9 +71,23 @@ class ModelViewer {
 
     animate() {
         requestAnimationFrame(() => this.animate());
-        this.controls.update();
-        this.renderer.render(this.scene, this.camera);
-        if (this.compassCtx) this.drawCompass(this.compassCtx, 72);
+        const moved = this.controls ? this.controls.update() : false;
+        if (moved || this.needsRender) {
+            this.renderer.render(this.scene, this.camera);
+            if (this.compassCtx) this.drawCompass(this.compassCtx, 72);
+            this.needsRender = false;
+        }
+    }
+
+    /* Ask for one more frame.
+       The viewport renders on demand rather than continuously, so anything that
+       changes what is on screen has to say so. Every method below that touches the
+       scene, a material, the camera or a light calls this before it returns —
+       including the ones whose change would happen to be picked up by orbit
+       damping, because relying on that makes a control work only when the mouse
+       happens to be moving. tests/test_viewport_invalidation.py holds the line. */
+    requestRender() {
+        this.needsRender = true;
     }
 
     resize() {
@@ -71,11 +96,16 @@ class ModelViewer {
         this.camera.aspect = w / h;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(w, h);
+        this.requestRender();
     }
 
     /* Load indexed geometry: Float32 vertices, Uint32 faces, Uint32 boundary edge pairs. */
     loadGeometry(preview, shellFaceCounts) {
+        this.requestRender();
         this.clear();
+        if (!preview.uvs) {
+            this.clearTextures();
+        }
         const verts = new Float32Array(preview.vertices);
         const faces = new Uint32Array(preview.faces);
         const bEdges = new Uint32Array(preview.boundary_edges);
@@ -94,6 +124,14 @@ class ModelViewer {
         geometry.translate(this.modelOffset.x, this.modelOffset.y, this.modelOffset.z);
         geometry.computeVertexNormals();
         geometry.computeBoundingSphere();
+
+        if (preview.uvs) {
+            const uvs = (preview.uvs instanceof ArrayBuffer || ArrayBuffer.isView(preview.uvs))
+                ? new Float32Array(preview.uvs.buffer || preview.uvs)
+                : new Float32Array(Uint8Array.from(atob(preview.uvs), c => c.charCodeAt(0)).buffer);
+            geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+            geometry.setAttribute('uv2', new THREE.BufferAttribute(uvs, 2));
+        }
 
         this.shellFaceCounts = shellFaceCounts || null;
         this.modelGroup = new THREE.Group();
@@ -159,11 +197,13 @@ class ModelViewer {
         geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
         this.mesh.material = this.materials.shells;
         this.shellMode = true;
+        this.requestRender();
     }
 
     hideShells() {
         this.shellMode = false;
         if (this.mesh) this.mesh.material = this.materials[this.mode];
+        this.requestRender();
     }
 
     /* Map a backend (Z-up) point into viewer space. */
@@ -178,6 +218,7 @@ class ModelViewer {
     highlight(location) {
         this.clearHighlight();
         if (!location || !location.points || !location.points.length || !this.mesh) return;
+        this.requestRender();
         const pts = location.points.map(p => this.toViewer(p));
         const radius = this.mesh.geometry.boundingSphere.radius;
         const group = new THREE.Group();
@@ -225,6 +266,7 @@ class ModelViewer {
             if (this.highlightGroup.parent) this.highlightGroup.parent.remove(this.highlightGroup);
             this.highlightGroup.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
             this.highlightGroup = null;
+            this.requestRender();
         }
     }
 
@@ -241,6 +283,7 @@ class ModelViewer {
         this.camera.position.copy(s.center).addScaledVector(d, dist);
         this.controls.target.copy(s.center);
         this.controls.update();
+        this.requestRender();
     }
 
     /* Interactive rotation gizmo. Rotation happens instantly in the viewport;
@@ -251,6 +294,7 @@ class ModelViewer {
             this.gizmo = new THREE.TransformControls(this.camera, this.renderer.domElement);
             this.gizmo.setMode('rotate');
             this.gizmo.setSpace('world');
+            this.gizmo.addEventListener('change', () => { this.requestRender(); });
             this.gizmo.addEventListener('dragging-changed', e => { this.controls.enabled = !e.value; });
             this.gizmo.addEventListener('mouseUp', () => {
                 if (this.onRotate) this.onRotate(this.modelMatrix());
@@ -263,6 +307,7 @@ class ModelViewer {
         } else {
             this.gizmo.detach();
         }
+        this.requestRender();
         return this.gizmoOn;
     }
 
@@ -274,6 +319,7 @@ class ModelViewer {
         const q = new THREE.Quaternion().setFromAxisAngle(v, THREE.MathUtils.degToRad(degrees));
         this.modelGroup.quaternion.premultiply(q);
         this.modelGroup.updateMatrixWorld(true);
+        this.requestRender();
         if (this.onRotate) this.onRotate(this.modelMatrix());
     }
 
@@ -316,6 +362,7 @@ class ModelViewer {
         g.computeVertexNormals();
         g.computeBoundingBox();
         g.computeBoundingSphere();
+        this.requestRender();
     }
 
     /* Small XYZ compass drawn from the camera orientation (model is Z-up). */
@@ -356,6 +403,39 @@ class ModelViewer {
             this.modelGroup = null;
         }
         this.mesh = this.wire = this.edgeLines = null;
+        this.requestRender();
+    }
+
+    /* Full reset back to an empty viewport: geometry, PBR maps and shading mode.
+       clear() alone leaves the previous model's textures on the shared materials,
+       which would then appear on whatever is loaded next. */
+    reset() {
+        this.clear();
+        this.clearTextures();
+        this.shellMode = false;
+        this.shellFaceCounts = null;
+        this.modelOffset = null;
+        this.setMode('shaded');
+    }
+
+    clearTextures() {
+        this.textureData = null;
+        const slots = ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap', 'displacementMap'];
+        const disposed = new Set();
+        for (const name of Object.keys(this.materials)) {
+            const m = this.materials[name];
+            for (const slot of slots) {
+                const tex = m[slot];
+                if (!tex) continue;
+                if (!disposed.has(tex)) { tex.dispose(); disposed.add(tex); }
+                m[slot] = null;
+            }
+            m.needsUpdate = true;
+        }
+        this.materials.pbr.roughness = 0.5;
+        this.materials.pbr.metalness = 0.05;
+        this.materials.pbr.displacementScale = 0;
+        this.requestRender();
     }
 
     /* Bounding sphere in world space (the group may be rotated). */
@@ -382,28 +462,32 @@ class ModelViewer {
         this.grid = new THREE.GridHelper(gridSize, Math.round(gridSize / 10), 0x3a3f47, 0x22262b);
         this.grid.visible = this.gridVisible !== false;
         this.scene.add(this.grid);
+        this.requestRender();
     }
 
     setMode(mode) {
         if (!this.materials[mode]) return;
         this.mode = mode;
         if (this.mesh && !this.shellMode) this.mesh.material = this.materials[mode];
+        this.requestRender();
     }
     buildWire() {
         if (this.wire || !this.mesh) return;
         this.wire = new THREE.LineSegments(new THREE.WireframeGeometry(this.mesh.geometry),
             new THREE.LineBasicMaterial({ color: 0x6b7280, transparent: true, opacity: 0.35 }));
         this.modelGroup.add(this.wire);
+        this.requestRender();
     }
 
     toggleWire() {
         this.showWire = !this.showWire;
         if (this.showWire) this.buildWire();
         if (this.wire) this.wire.visible = this.showWire;
+        this.requestRender();
         return this.showWire;
     }
-    toggleEdges() { this.showEdges = !this.showEdges; if (this.edgeLines) this.edgeLines.visible = this.showEdges; return this.showEdges; }
-    toggleGrid() { this.gridVisible = !(this.gridVisible !== false); this.grid.visible = this.gridVisible; return this.gridVisible; }
+    toggleEdges() { this.showEdges = !this.showEdges; if (this.edgeLines) this.edgeLines.visible = this.showEdges; this.requestRender(); return this.showEdges; }
+    toggleGrid() { this.gridVisible = !(this.gridVisible !== false); this.grid.visible = this.gridVisible; this.requestRender(); return this.gridVisible; }
 
     updateLight() {
         const az = this.lightAz * Math.PI / 180, el = this.lightEl * Math.PI / 180;
@@ -411,10 +495,94 @@ class ModelViewer {
             this.lightDist * Math.cos(el) * Math.sin(az),
             this.lightDist * Math.sin(el),
             this.lightDist * Math.cos(el) * Math.cos(az));
+        this.requestRender();
     }
     setLight(az, el, power) {
         this.lightAz = az; this.lightEl = el; this.key.intensity = power;
         this.updateLight();
+        this.requestRender();
+    }
+
+    applyPBRTextures(textureMaps) {
+        if (!textureMaps) return;
+        this.textureData = textureMaps;
+        const loader = new THREE.TextureLoader();
+
+        const loadTex = (dataUri, isColor = false) => {
+            if (!dataUri) return null;
+            const tex = loader.load(dataUri, () => { this.requestRender(); });
+            tex.wrapS = THREE.RepeatWrapping;
+            tex.wrapT = THREE.RepeatWrapping;
+            if (isColor) tex.encoding = THREE.sRGBEncoding;
+            return tex;
+        };
+
+        const albedoTex = loadTex(textureMaps.albedo, true);
+        const normalTex = loadTex(textureMaps.normal, false);
+        const roughnessTex = loadTex(textureMaps.roughness, false);
+        const metallicTex = loadTex(textureMaps.metallic, false);
+        const aoTex = loadTex(textureMaps.ao, false);
+        const heightTex = loadTex(textureMaps.height, false);
+
+        // Configure PBR material
+        const pbr = this.materials.pbr;
+        pbr.map = albedoTex;
+        pbr.normalMap = normalTex;
+        if (normalTex) pbr.normalScale = new THREE.Vector2(1.2, 1.2);
+        pbr.roughnessMap = roughnessTex;
+        pbr.roughness = roughnessTex ? 1.0 : 0.5;
+        pbr.metalnessMap = metallicTex;
+        pbr.metalness = metallicTex ? 1.0 : 0.05;
+        pbr.aoMap = aoTex;
+        pbr.aoMapIntensity = 1.0;
+        // Displacement moves real vertices, so it only shows detail on a dense mesh.
+        // Off by default; the panel slider turns it up in millimetres.
+        pbr.displacementMap = heightTex;
+        pbr.displacementScale = heightTex ? this.displaceMm : 0;
+        pbr.displacementBias = heightTex ? -this.displaceMm / 2 : 0;
+        pbr.needsUpdate = true;
+
+        // Configure Channel Isolation materials
+        if (albedoTex) this.materials.albedo.map = albedoTex;
+        if (normalTex) this.materials.normal_map.map = normalTex;
+        if (roughnessTex) this.materials.roughness_map.map = roughnessTex;
+        if (metallicTex) this.materials.metallic_map.map = metallicTex;
+        if (aoTex) this.materials.ao_map.map = aoTex;
+        if (heightTex) this.materials.height_map.map = heightTex;
+
+        for (const m of ['albedo', 'normal_map', 'roughness_map', 'metallic_map', 'ao_map', 'height_map']) {
+            this.materials[m].needsUpdate = true;
+        }
+
+        if (this.mode === 'shaded') {
+            this.setMode('pbr');
+        } else if (this.mesh && this.materials[this.mode]) {
+            this.mesh.material = this.materials[this.mode];
+        }
+        this.requestRender();
+    }
+
+    /* Height-map displacement, in millimetres of surface travel. */
+    setDisplacement(mm) {
+        this.displaceMm = Math.max(0, Number(mm) || 0);
+        const pbr = this.materials.pbr;
+        if (!pbr.displacementMap) return false;
+        pbr.displacementScale = this.displaceMm;
+        pbr.displacementBias = -this.displaceMm / 2;
+        pbr.needsUpdate = true;
+        this.requestRender();
+        return true;
+    }
+
+    hasHeightMap() { return !!this.materials.pbr.displacementMap; }
+
+    setEnvironment(rotationDeg = 0, exposure = 1.0) {
+        this.renderer.toneMappingExposure = exposure;
+        if (this.key) {
+            const rad = (this.lightAz + rotationDeg) * Math.PI / 180, el = this.lightEl * Math.PI / 180;
+            this.key.position.set(this.lightDist * Math.cos(el) * Math.sin(rad), this.lightDist * Math.sin(el), this.lightDist * Math.cos(el) * Math.cos(rad));
+        }
+        this.requestRender();
     }
 }
 

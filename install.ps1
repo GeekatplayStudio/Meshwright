@@ -11,13 +11,17 @@
     .\install.ps1 -NoOptional      core only, skip the extra mesh engines
     .\install.ps1 -Python "C:\Path\to\python.exe"   use this interpreter
     .\install.ps1 -Global          install into your system Python (not recommended)
+    .\install.ps1 -ComfyUI "D:\ComfyUI"   install custom nodes to this ComfyUI path
+    .\install.ps1 -SkipComfyUI     skip the ComfyUI custom node installation prompt
 #>
 param(
     [switch]$Global,
     [string]$Python = "",
     [switch]$Recreate,
     [switch]$NoOptional,
-    [switch]$Check
+    [switch]$Check,
+    [string]$ComfyUI = "",
+    [switch]$SkipComfyUI
 )
 
 $ErrorActionPreference = "Stop"
@@ -268,6 +272,41 @@ if ($npm) {
     Note $r.Output
 } else {
     Note "npm not found - using the vendored Three.js files in ui/vendor."
+}
+
+# ---------------------------------------------------------------- 6. comfyui (optional)
+if (-not $SkipComfyUI) {
+    Say ""
+    Say "========================================================" Cyan
+    Say "  ComfyUI Custom Nodes (Optional)" Cyan
+    Say "========================================================" Cyan
+    Say "  Meshwright can install custom nodes into ComfyUI so you can" Gray
+    Say "  repair and reduce 3D meshes inside ComfyUI workflows." Gray
+    Say ""
+
+    $installComfy = $false
+    if ($ComfyUI) {
+        $installComfy = $true
+    } else {
+        $ans = Read-Host "  Do you want to install Meshwright custom nodes for ComfyUI? [y/N]"
+        if ($ans -and ($ans.Trim().ToLower() -eq 'y' -or $ans.Trim().ToLower() -eq 'yes')) {
+            $installComfy = $true
+        }
+    }
+
+    if ($installComfy) {
+        $comfyScript = Join-Path $root "scripts\install_comfyui_nodes.py"
+        if (Test-Path $comfyScript) {
+            $comfyArgs = @($comfyScript)
+            if ($ComfyUI) {
+                $comfyArgs += @("--comfy-path", $ComfyUI)
+            }
+            & $py @comfyArgs
+        }
+    } else {
+        Say "  Skipping ComfyUI nodes. You can install them anytime later with:" DarkGray
+        Say "  .\.venv\Scripts\python.exe scripts\install_comfyui_nodes.py" DarkGray
+    }
 }
 
 # ---------------------------------------------------------------- done

@@ -1,9 +1,11 @@
 import os
-import unittest.mock as mock
+from unittest import mock
+
 import trimesh
+
 from app import AppApi
-from engine.model_loader import load_model
 from engine.mesh_repair import repair_mesh
+from engine.model_loader import load_model
 from engine.stl_exporter import export_to_stl
 
 

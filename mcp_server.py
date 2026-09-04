@@ -9,13 +9,14 @@ Run:            python mcp_server.py
 Claude Desktop: add to claude_desktop_config.json
   "meshwright": {"command": "python", "args": ["D:/path/to/mcp_server.py"]}
 """
+import json
 import os
 import sys
-import json
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from mcp.server.mcpserver import MCPServer
+
 from engine.service import MeshService, ServiceError
 from engine.validation import ValidationError
 
@@ -38,9 +39,21 @@ service = MeshService(log=_log, autosave=True)
 
 
 def _strip(res: dict) -> dict:
-    """Tool results must be small: drop the binary preview payload."""
+    """
+    Tool results must be small.
+
+    The mesh preview is binary geometry, and the texture block used to carry every
+    map as base64 — a repair on a textured model returned 9 MB, which is no use to
+    an assistant working through a context window. Both are dropped; the texture
+    summary that remains says what exists without the pixels.
+    """
     res = dict(res)
     res.pop("preview", None)
+    res.pop("uv_layout", None)
+    textures = res.get("textures")
+    if isinstance(textures, dict):
+        res["textures"] = {k: v for k, v in textures.items()
+                           if k in ("has_textures", "has_uv", "channels")}
     return res
 
 

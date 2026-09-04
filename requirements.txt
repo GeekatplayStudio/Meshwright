@@ -16,3 +16,6 @@ pywebview>=5.0,<7
 pillow>=10.0
 lxml>=5.0                  # 3MF / DAE
 shapely>=2.0               # 2D section helpers in trimesh
+xatlas>=0.0.9              # UV unwrapping
+rtree>=1.3,<2              # AABB queries behind exact UV transfer (bundles libspatialindex)
+opencv-python>=4.8         # texture processing and seam dilation

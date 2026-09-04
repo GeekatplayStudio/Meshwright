@@ -135,3 +135,37 @@ from engine.model_loader  import load_model
 ```
 
 Each is pure: mesh in, mesh + report out. No global state, no UI.
+
+
+## Textures and the viewport
+
+```python
+svc.load("dragon.fbx")          # UVs and any PBR maps come with the model
+svc.corner_uv                   # (F, 3, 2) per-face-corner UVs, or None
+svc.unwrap_uvs()                # build a layout; refuses silently replacing an existing one
+svc.unwrap_uvs(force=True)      # ... unless you say so
+svc.get_texture_state()         # what exists: channels, version, has_uv — no pixels
+svc.get_texture_maps()          # the base64 maps, only worth calling when the version moved
+svc.get_uv_layout()             # UV-space edges for a 2D view
+svc.export_texture_pack(folder) # every channel plus a UV guide, gutters padded
+svc.bake_and_export_glb(path)   # one self-contained file
+```
+
+Texture coordinates live in a per-face-corner array beside the mesh, never inside it, so the
+geometry stays welded and the diagnostics measure the real thing. `_commit()` carries the channel
+onto whatever an operation returns — by reindexing when the faces were only permuted, and by
+re-projecting onto the old surface when the geometry genuinely changed.
+
+```python
+svc.preview_max_faces = 900_000     # when the viewport starts drawing a simplified copy
+svc.set_preview_detail(0.5)         # draw half the model
+svc.set_preview_detail(1.0)         # draw all of it
+svc.set_preview_detail(None)        # let Meshwright choose
+```
+
+Viewport detail changes what is drawn and nothing else: the mesh, every measurement and every
+export always use all of it.
+
+```python
+svc.clear()                     # empty the workspace: mesh, history, snapshot and textures
+```

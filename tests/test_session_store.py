@@ -1,7 +1,9 @@
 import time
+
 import trimesh
-from engine.session_store import SessionStore
+
 from engine.service import MeshService
+from engine.session_store import SessionStore
 
 
 def test_autosave_and_recovery_roundtrip(tmp_path, monkeypatch):

@@ -21,6 +21,11 @@ present on your machine.
 | ufbx | MIT | https://github.com/ufbx/ufbx |
 | MCP Python SDK | MIT | https://github.com/modelcontextprotocol/python-sdk |
 | Pillow | MIT-CMU | https://python-pillow.org |
+| xatlas | MIT | https://github.com/jpcy/xatlas |
+| xatlas-python (wrapper) | MIT | https://github.com/mworchel/xatlas-python |
+| Rtree | MIT | https://github.com/Toblerity/rtree |
+| libspatialindex (bundled by Rtree) | MIT | https://github.com/libspatialindex/libspatialindex |
+| OpenCV (opencv-python) | Apache-2.0 | https://opencv.org |
 
 ## Copyleft — read before redistributing binaries
 

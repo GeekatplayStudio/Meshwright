@@ -26,6 +26,8 @@
                 <button id="btnUndo" title="Undo (Ctrl+Z)" disabled>Undo</button>
                 <button id="btnRedo" title="Redo (Ctrl+Y)" disabled>Redo</button>
             </div>
+            <button id="btnNew" class="btn" title="Close the model and start over (Ctrl+N, or Delete)">New</button>
+            <button id="btnComfyUI" class="btn" title="Install custom nodes into ComfyUI">ComfyUI Nodes</button>
             <button id="btnHelp" class="btn" title="Keyboard shortcuts (?)">?</button>
             <button id="btnConsole" class="btn" title="Show activity log (Ctrl+`)">Console</button>
             <button id="btnOpen" class="btn btn-primary" title="Open model (Ctrl+O)">Open model</button>
@@ -56,6 +58,23 @@
                     <button data-mode="clay" title="Clay">Clay</button>
                     <button data-mode="normals" title="Normals">Normals</button>
                     <button data-mode="xray" title="X-ray">X-ray</button>
+                </div>
+                <div class="seg" id="segPbrModes">
+                    <button data-mode="pbr" title="Full PBR Shading">PBR</button>
+                    <button data-mode="albedo" title="Albedo / Base Color">Albedo</button>
+                    <button data-mode="normal_map" title="Normal Map">Normal</button>
+                    <button data-mode="roughness_map" title="Roughness Map">Rough</button>
+                    <button data-mode="metallic_map" title="Metallic Map">Metal</button>
+                    <button data-mode="ao_map" title="Ambient Occlusion">AO</button>
+                    <button data-mode="height_map" title="Height / displacement map">Height</button>
+                </div>
+                <div class="seg">
+                    <button id="btnOpenUv" title="2D UV Island Unfold View" disabled>2D UVs</button>
+                </div>
+                <div class="seg detail-seg" id="segDetail" title="How much of the model the viewport draws. Repair, reduce and export always use all of it.">
+                    <span class="detail-label">Detail</span>
+                    <input type="range" id="viewDetail" min="5" max="100" step="5" value="100" disabled>
+                    <span class="mono detail-value" id="valDetail">100%</span>
                 </div>
                 <div class="seg">
                     <button id="btnWire" title="Wireframe">Wire</button>
@@ -202,6 +221,34 @@
                     <div class="hint" id="reduceResult"></div>
                 </section>
 
+                <!-- Texture & PBR -->
+                <section class="card" id="cardTexture">
+                    <h2>Texture &amp; PBR</h2>
+                    <p class="hint">Unwrap UVs, derive PBR maps from image, edit in Photoshop, bake to GLB.</p>
+                    <div class="row two">
+                        <button id="btnUnwrapUV" class="btn" disabled>Unwrap UVs</button>
+                        <button id="btnViewUV" class="btn" disabled>2D UV View</button>
+                    </div>
+                    <div id="uvStats" class="hint hidden"></div>
+
+                    <p class="hint" style="margin-top:10px; font-weight:600;">PBR Map Generation</p>
+                    <button id="btnLoadTexture" class="btn wide" disabled>Load Image / Generate PBR</button>
+
+                    <div class="row"><span>Normal</span><input type="range" id="pbrNormalStr" min="0.5" max="5.0" step="0.1" value="2.0"><span class="mono" id="valNormalStr">2.0</span></div>
+                    <label class="check"><input type="checkbox" id="chkOpenGLNormal" checked><span>OpenGL Normal (+Y) / DirectX (-Y)</span></label>
+                    <label class="check"><input type="checkbox" id="chkTileable"><span title="Tick for a repeating material, leave off for a photo or a texture painted for this model">Image tiles seamlessly</span></label>
+                    <div class="row"><span>Roughness</span><input type="range" id="pbrRoughness" min="0.0" max="1.0" step="0.05" value="0.5"><span class="mono" id="valRoughness">0.5</span></div>
+                    <div class="row"><span>Metallic</span><input type="range" id="pbrMetallic" min="0.0" max="1.0" step="0.05" value="0.0"><span class="mono" id="valMetallic">0.0</span></div>
+                    <div class="row"><span title="Push the surface out along the height map. Needs a dense mesh to show detail.">Displace</span><input type="range" id="pbrDisplace" min="0" max="5" step="0.1" value="0" disabled><span class="mono" id="valDisplace">off</span></div>
+
+                    <p class="hint" style="margin-top:10px; font-weight:600;">Photoshop Round-Trip</p>
+                    <div class="row two">
+                        <button id="btnExportTex" class="btn" disabled title="Export maps + transparent UV guide PNG for Photoshop">Export Maps</button>
+                        <button id="btnReloadTex" class="btn" disabled title="Reload edited texture PNG files">Reload Maps</button>
+                    </div>
+                    <button id="btnBakeGLB" class="btn btn-primary wide" style="margin-top:6px;" disabled title="Export self-contained GLB with embedded PBR textures">Save Baked GLB</button>
+                </section>
+
                 <!-- Export -->
                 <section class="card">
                     <h2>Export</h2>
@@ -286,8 +333,9 @@
 
         <section>
             <h3>Integrations</h3>
-            <p>The same engine is available to AI assistants and editors through an MCP server (<span class="mono">python mcp_server.py</span>)
-            and directly from Python (<span class="mono">engine.service.MeshService</span>). All inputs are validated and every call is undoable.</p>
+            <p>The same engine is available to AI assistants and editors through an MCP server (<span class="mono">python mcp_server.py</span>),
+            directly from Python (<span class="mono">engine.service.MeshService</span>), and as custom nodes for <strong>ComfyUI</strong>.</p>
+            <p style="margin-top: 8px;"><button id="btnAboutComfyUI" class="btn">Install ComfyUI Custom Nodes</button></p>
         </section>
 
         <a class="donate" href="https://geekatplay.gumroad.com/coffee" data-url="https://geekatplay.gumroad.com/coffee">&#9749; Buy me a coffee &mdash; geekatplay.gumroad.com/coffee</a>
@@ -303,7 +351,33 @@
     </div>
 </div>
 
+<div class="modal hidden" id="uvModal">
+    <div class="modal-card uv-card">
+        <button class="about-close" id="btnUvClose" title="Close (Esc)">&times;</button>
+        <div class="uv-modal-head">
+            <h2>2D UV Island Unfold View</h2>
+            <p class="hint">Inspect UV coordinates, seam borders, and channel overlays. Scroll to zoom, drag to pan, double-click to reset.</p>
+        </div>
+        <div class="uv-toolbar">
+            <div class="seg small" id="uvChannelSeg">
+                <button data-uvchannel="none" class="active">Grid</button>
+                <button data-uvchannel="albedo">Albedo</button>
+                <button data-uvchannel="normal">Normal</button>
+                <button data-uvchannel="roughness">Roughness</button>
+                <button data-uvchannel="metallic">Metallic</button>
+                <button data-uvchannel="ao">AO</button>
+            </div>
+            <button id="btnExportUvWireframe" class="btn small">Export UV Guide PNG</button>
+        </div>
+        <p class="hint uv-hint hidden" id="uvHint"></p>
+        <div class="uv-canvas-box">
+            <canvas id="uvCanvas" width="600" height="600"></canvas>
+        </div>
+    </div>
+</div>
+
 <script src="js/viewer.js"></script>
 <script src="js/app.js"></script>
+<script src="js/texture_ui.js"></script>
 </body>
 </html>

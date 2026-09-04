@@ -1,0 +1,358 @@
+"""
+Per-corner UV channel — Geekatplay Studio
+Author: Vladimir Chopine
+
+Meshwright stores texture coordinates per FACE CORNER, in an (F, 3, 2) array held
+beside the mesh, rather than per vertex.
+
+Why it matters: a per-vertex UV forces a vertex to be duplicated at every UV seam.
+A renderer does not mind, but a mesh analyser does — the duplication turns one
+watertight solid into a pile of disconnected charts with open boundary edges, and
+the repair pipeline then closes "holes" that were never there. Per-corner UVs let
+the geometry stay welded, so analysis, repair and decimation all see the true
+topology. Vertices are split only at the two boundaries that genuinely need it:
+the GPU vertex buffer and a glTF/OBJ file (see `split_for_gpu`).
+
+The transfer used after an edit is exact rather than approximate: every corner is
+projected to its closest point on the *source surface* (an AABB query, not a
+nearest-centroid guess), and corners that land across a UV seam are re-evaluated
+inside the chart their own face belongs to.
+"""
+import numpy as np
+import trimesh
+from scipy.sparse import coo_matrix
+from scipy.sparse.csgraph import connected_components
+from scipy.spatial import cKDTree
+
+from engine.indexing import unique_rows as _unique_rows
+
+try:                                   # broad phase for the exact closest-point query
+    import rtree  # noqa: F401
+    HAS_RTREE = True
+except ImportError:                    # pragma: no cover - exercised by the fallback path
+    HAS_RTREE = False
+
+# How many source faces to test per query point when rtree is missing. The
+# fallback is exact within this candidate set; 24 covers the neighbourhood of a
+# point comfortably on any mesh with sane triangle sizes.
+FALLBACK_CANDIDATES = 24
+
+
+# ------------------------------------------------------------------ construction
+def from_vertex_uv(faces, vertex_uv) -> np.ndarray | None:
+    """Fan a per-vertex UV array out to per-corner. Returns None if it cannot."""
+    if vertex_uv is None or faces is None or len(faces) == 0:
+        return None
+    uv = np.asarray(vertex_uv, dtype=np.float32)
+    f = np.asarray(faces)
+    if uv.ndim != 2 or uv.shape[1] != 2 or len(uv) <= int(f.max()):
+        return None
+    return np.ascontiguousarray(uv[f], dtype=np.float32)
+
+
+def is_valid(mesh: trimesh.Trimesh, corner_uv) -> bool:
+    """True when this UV array actually describes this mesh."""
+    if corner_uv is None or mesh is None:
+        return False
+    uv = np.asarray(corner_uv)
+    return uv.ndim == 3 and uv.shape == (len(mesh.faces), 3, 2)
+
+
+def uv_of(mesh: trimesh.Trimesh, corner_uv) -> np.ndarray | None:
+    """The UV array if it matches the mesh, otherwise None. Use before any read."""
+    return np.asarray(corner_uv, dtype=np.float32) if is_valid(mesh, corner_uv) else None
+
+
+# ------------------------------------------------------------------ charts
+def chart_labels(mesh: trimesh.Trimesh, corner_uv: np.ndarray, tol: float = 1e-6) -> np.ndarray:
+    """
+    Label each face with the id of the UV chart (island) it belongs to.
+
+    Two neighbouring faces share a chart when they agree on the UV of both ends of
+    their shared edge. Where they disagree, that edge is a seam.
+    """
+    n_faces = len(mesh.faces)
+    if n_faces == 0:
+        return np.zeros(0, dtype=np.int32)
+
+    pairs = np.asarray(mesh.face_adjacency)
+    if len(pairs) == 0:
+        return np.arange(n_faces, dtype=np.int32)
+
+    shared = np.asarray(mesh.face_adjacency_edges)       # (A, 2) welded vertex ids
+    faces = np.asarray(mesh.faces)
+    joined = np.ones(len(pairs), dtype=bool)
+
+    for end in range(2):                                  # both ends of the shared edge
+        vertex = shared[:, end]
+        seen = None
+        for side in range(2):                             # both faces of the pair
+            tri = faces[pairs[:, side]]                   # (A, 3)
+            corner = np.argmax(tri == vertex[:, None], axis=1)
+            uv = corner_uv[pairs[:, side], corner]        # (A, 2)
+            if seen is None:
+                seen = uv
+            else:
+                joined &= np.all(np.abs(uv - seen) <= tol, axis=1)
+
+    linked = pairs[joined]
+    if len(linked) == 0:
+        return np.arange(n_faces, dtype=np.int32)
+
+    graph = coo_matrix((np.ones(len(linked), dtype=np.int8), (linked[:, 0], linked[:, 1])),
+                       shape=(n_faces, n_faces))
+    _, labels = connected_components(graph, directed=False)
+    return labels.astype(np.int32)
+
+
+def seam_edge_count(mesh: trimesh.Trimesh, corner_uv: np.ndarray) -> int:
+    """How many interior edges are UV seams — reported to the user after unwrapping."""
+    if not is_valid(mesh, corner_uv):
+        return 0
+    labels = chart_labels(mesh, corner_uv)
+    pairs = np.asarray(mesh.face_adjacency)
+    if len(pairs) == 0:
+        return 0
+    return int(np.count_nonzero(labels[pairs[:, 0]] != labels[pairs[:, 1]]))
+
+
+# ------------------------------------------------------------------ geometry helpers
+def _barycentric(tri: np.ndarray, pts: np.ndarray) -> np.ndarray:
+    """
+    Unclamped barycentric coordinates of points against triangles, in the plane of
+    each triangle. Shapes (N, 3, 3) and (N, 3) in, (N, 3) out.
+
+    Left unclamped on purpose: outside [0, 1] it extends the triangle's own linear
+    parameterisation, which is exactly what a corner sitting just past a chart's
+    edge needs.
+    """
+    v0 = tri[:, 1] - tri[:, 0]
+    v1 = tri[:, 2] - tri[:, 0]
+    v2 = pts - tri[:, 0]
+    d00 = np.einsum('ij,ij->i', v0, v0)
+    d01 = np.einsum('ij,ij->i', v0, v1)
+    d11 = np.einsum('ij,ij->i', v1, v1)
+    d20 = np.einsum('ij,ij->i', v2, v0)
+    d21 = np.einsum('ij,ij->i', v2, v1)
+    denom = d00 * d11 - d01 * d01
+    denom = np.where(np.abs(denom) < 1e-20, 1.0, denom)
+    b1 = (d11 * d20 - d01 * d21) / denom
+    b2 = (d00 * d21 - d01 * d20) / denom
+    return np.stack([1.0 - b1 - b2, b1, b2], axis=1)
+
+
+def _closest_point_fallback(mesh: trimesh.Trimesh, points: np.ndarray):
+    """
+    Closest point on the surface without rtree: shortlist faces by centroid with a
+    KD-tree, then solve the exact point-triangle distance for each candidate.
+    """
+    tris = mesh.triangles
+    centroids = tris.mean(axis=1)
+    k = int(min(FALLBACK_CANDIDATES, len(centroids)))
+    _, candidates = cKDTree(centroids).query(points, k=k)
+    candidates = np.atleast_2d(candidates.reshape(len(points), k))
+
+    best_d = np.full(len(points), np.inf)
+    best_f = np.zeros(len(points), dtype=np.int64)
+    best_p = np.zeros((len(points), 3), dtype=np.float64)
+    for column in range(k):
+        fid = candidates[:, column]
+        cp = trimesh.triangles.closest_point(tris[fid], points)
+        d = np.linalg.norm(cp - points, axis=1)
+        better = d < best_d
+        best_d[better] = d[better]
+        best_f[better] = fid[better]
+        best_p[better] = cp[better]
+    return best_p, best_f
+
+
+def closest_surface_point(mesh: trimesh.Trimesh, points: np.ndarray):
+    """Closest point on `mesh` for each query point, as (positions, face_ids)."""
+    points = np.asarray(points, dtype=np.float64)
+    if len(points) == 0:
+        return points.reshape(0, 3), np.zeros(0, dtype=np.int64)
+    if HAS_RTREE:
+        try:
+            cp, _, fid = trimesh.proximity.closest_point(mesh, points)
+            return np.asarray(cp), np.asarray(fid, dtype=np.int64)
+        except Exception:
+            pass
+    return _closest_point_fallback(mesh, points)
+
+
+# ------------------------------------------------------------------ transfer
+def _same_topology(a: trimesh.Trimesh, b: trimesh.Trimesh) -> bool:
+    return (len(a.faces) == len(b.faces)
+            and len(a.vertices) == len(b.vertices)
+            and np.array_equal(np.asarray(a.faces), np.asarray(b.faces))
+            and np.allclose(np.asarray(a.vertices), np.asarray(b.vertices), atol=1e-9))
+
+
+def transfer(source: trimesh.Trimesh, source_uv, target: trimesh.Trimesh) -> np.ndarray | None:
+    """
+    Carry per-corner UVs from `source` onto `target` after an edit.
+
+    Each target corner is projected to its closest point on the source *surface* and
+    reads the UV interpolated there. A corner whose closest source face sits in a
+    different UV chart from the rest of its own face would drag a texel from the far
+    side of the atlas; those are re-evaluated against the face's own chart instead,
+    which is what keeps seams from smearing.
+    """
+    src_uv = uv_of(source, source_uv)
+    if src_uv is None or len(target.faces) == 0 or len(source.faces) == 0:
+        return None
+    if _same_topology(source, target):
+        return src_uv.copy()
+
+    tgt_faces = np.asarray(target.faces)
+    tgt_verts = np.asarray(target.vertices, dtype=np.float64)
+    tris = tgt_verts[tgt_faces]                                   # (F, 3, 3)
+    n_faces = len(tgt_faces)
+
+    corners = tris.reshape(-1, 3)                                 # (F*3, 3)
+    centroids = tris.mean(axis=1)                                 # (F, 3)
+
+    src_tris = np.asarray(source.triangles)
+    labels = chart_labels(source, src_uv)
+
+    # The anchor decides which chart each target face belongs to.
+    _, anchor_face = closest_surface_point(source, centroids)
+    anchor_chart = labels[anchor_face]
+
+    corner_pos, corner_face = closest_surface_point(source, corners)
+    direct_bary = _barycentric(src_tris[corner_face], corner_pos)
+    direct_uv = np.einsum('nk,nkj->nj', direct_bary, src_uv[corner_face])
+
+    # Corners that fell into a different chart than their face's anchor: read them
+    # from the anchor triangle instead, extending its parameterisation.
+    anchor_per_corner = np.repeat(anchor_face, 3)
+    crossed = labels[corner_face] != np.repeat(anchor_chart, 3)
+    if np.any(crossed):
+        af = anchor_per_corner[crossed]
+        bary = _barycentric(src_tris[af], corners[crossed])
+        direct_uv[crossed] = np.einsum('nk,nkj->nj', bary, src_uv[af])
+
+    return np.ascontiguousarray(direct_uv.reshape(n_faces, 3, 2), dtype=np.float32)
+
+
+# ------------------------------------------------------------------ splitting out
+def split_for_gpu(mesh: trimesh.Trimesh, corner_uv, quantize: int = 1 << 20):
+    """
+    Expand a welded mesh + corner UVs into the per-vertex form a GPU or a glTF file
+    needs: vertices duplicated only where a UV seam actually runs.
+
+    Returns (positions, faces, uvs, vertex_map) where `vertex_map` gives, for every
+    original vertex, one index into the new buffer — enough to redraw anything that
+    was indexed against the welded mesh, such as open-edge overlays.
+    """
+    uv = uv_of(mesh, corner_uv)
+    verts = np.asarray(mesh.vertices, dtype=np.float64)
+    faces = np.asarray(mesh.faces)
+    if uv is None:
+        return verts, faces, None, np.arange(len(verts), dtype=np.int64)
+
+    flat_vertex = faces.reshape(-1).astype(np.int64)
+    flat_uv = uv.reshape(-1, 2)
+
+    # One row per corner: the vertex it uses plus its quantised UV. Corners that
+    # agree on all three collapse back into a single shared vertex.
+    key = np.column_stack([
+        flat_vertex,
+        np.round(flat_uv.astype(np.float64) * quantize).astype(np.int64),
+    ])
+    first, inverse, _ = _unique_rows(key)
+
+    new_faces = inverse.reshape(-1, 3).astype(np.int64)
+    new_verts = verts[flat_vertex[first]]
+    new_uvs = flat_uv[first]
+
+    # Any split copy will do for an overlay drawn in the welded index space.
+    vertex_map = np.zeros(len(verts), dtype=np.int64)
+    vertex_map[flat_vertex[first]] = np.arange(len(first), dtype=np.int64)
+    return new_verts, new_faces, np.ascontiguousarray(new_uvs, dtype=np.float32), vertex_map
+
+
+def to_textured_mesh(mesh: trimesh.Trimesh, corner_uv, material=None) -> trimesh.Trimesh:
+    """A trimesh carrying per-vertex UVs, ready for glTF / OBJ export."""
+    verts, faces, uvs, _ = split_for_gpu(mesh, corner_uv)
+    out = trimesh.Trimesh(vertices=verts, faces=faces, process=False)
+    if uvs is not None:
+        out.visual = trimesh.visual.TextureVisuals(uv=uvs, material=material)
+    return out
+
+
+# ------------------------------------------------------------------ UI data
+def _corner_of(faces, face_ids, vertex_ids):
+    """Which corner (0, 1 or 2) of each face holds that vertex."""
+    return np.argmax(faces[face_ids] == vertex_ids[:, None], axis=1)
+
+
+def seam_outline(mesh: trimesh.Trimesh, corner_uv: np.ndarray) -> np.ndarray:
+    """
+    The island outlines in UV space, as (E, 2, 2) line segments.
+
+    An island is bounded by two kinds of edge: a seam, where two neighbouring faces
+    disagree about the UV of the edge they share, and an open edge, which has no
+    neighbour at all. Together they are the outlines you actually want to see in a UV
+    view — and on a dense model there are orders of magnitude fewer of them than there
+    are triangles.
+    """
+    faces = np.asarray(mesh.faces)
+    pairs = np.asarray(mesh.face_adjacency)
+    segments = []
+
+    if len(pairs):
+        labels = chart_labels(mesh, corner_uv)
+        seam = labels[pairs[:, 0]] != labels[pairs[:, 1]]
+        if np.any(seam):
+            shared = np.asarray(mesh.face_adjacency_edges)[seam]
+            side = pairs[seam, 0]
+            a = corner_uv[side, _corner_of(faces, side, shared[:, 0])]
+            b = corner_uv[side, _corner_of(faces, side, shared[:, 1])]
+            segments.append(np.stack([a, b], axis=1))
+
+    # Edges with a single face: the model's own open boundary.
+    edges = faces[:, [[0, 1], [1, 2], [2, 0]]].reshape(-1, 2)
+    owner = np.repeat(np.arange(len(faces)), 3)
+    _, inverse, counts = _unique_rows(np.sort(edges, axis=1))
+    lone = counts[inverse] == 1
+    if np.any(lone):
+        side = owner[lone]
+        ends = edges[lone]
+        a = corner_uv[side, _corner_of(faces, side, ends[:, 0])]
+        b = corner_uv[side, _corner_of(faces, side, ends[:, 1])]
+        segments.append(np.stack([a, b], axis=1))
+
+    if not segments:
+        return np.zeros((0, 2, 2), dtype=np.float32)
+    return np.concatenate(segments).astype(np.float32)
+
+
+def wireframe_lines(mesh: trimesh.Trimesh, corner_uv, max_edges: int = 15000) -> dict:
+    """
+    Flat [u0, v0, u1, v1, ...] list of UV-space edges for the 2D unfold canvas.
+
+    A model with a few thousand triangles is drawn edge for edge. Past that, drawing
+    one triangle in every five hundred produces a field of disconnected specks rather
+    than a wireframe, so what gets drawn instead is the island outlines — the seams
+    and open edges that define the layout. That is the thing the view exists to show,
+    and it stays readable at any density.
+    """
+    uv = uv_of(mesh, corner_uv)
+    if uv is None or len(mesh.faces) == 0:
+        return {"has_uv": False, "lines": [], "edge_count": 0, "outlines_only": False}
+
+    outlines_only = len(uv) * 3 > max_edges
+    if outlines_only:
+        edges = seam_outline(mesh, uv)
+        if len(edges) > max_edges:            # a pathological layout; thin evenly
+            edges = edges[::int(np.ceil(len(edges) / max_edges))]
+    else:
+        edges = np.concatenate([uv[:, [0, 1]], uv[:, [1, 2]], uv[:, [2, 0]]], axis=0)
+
+    return {
+        "has_uv": True,
+        "edge_count": int(len(edges)),
+        "outlines_only": bool(outlines_only),
+        "lines": np.round(edges.reshape(-1), 4).tolist(),
+    }

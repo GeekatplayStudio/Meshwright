@@ -1,3 +1,4 @@
+import numpy as np
 import trimesh
 
 try:
@@ -13,12 +14,15 @@ except ImportError:
     HAS_PYMESHLAB = False
 
 
-def reduce_mesh(mesh: trimesh.Trimesh, target_factor: float = 0.5, target_faces: int = 0) -> tuple[trimesh.Trimesh, dict]:
+def reduce_mesh(mesh: trimesh.Trimesh, target_factor: float = 0.5, target_faces: int = 0,
+                log=None) -> tuple[trimesh.Trimesh, dict]:
     """
     Reduces the polygon count of the mesh using Quadric Edge Collapse decimation.
     - target_factor: float between 0.05 and 0.95 (e.g. 0.5 = keep 50% faces, remove 50%).
     - target_faces: int, if > 0 explicitly targets that face count.
+    - log: optional callable(msg, level) for diagnostic logging.
     """
+    log = log or (lambda m, level="info": None)
     initial_faces = len(mesh.faces)
     if initial_faces < 10:
         return mesh, {"reduced": False, "reason": "Mesh face count too low to reduce."}
@@ -34,10 +38,10 @@ def reduce_mesh(mesh: trimesh.Trimesh, target_factor: float = 0.5, target_faces:
     method_used = "none"
 
     def _nonmanifold(m):
-        groups = trimesh.grouping.group_rows(m.edges_sorted)
-        return int(sum(1 for g in groups if len(g) > 2))
-
-    nm_before = _nonmanifold(mesh)
+        if len(m.faces) == 0:
+            return 0
+        _, counts = np.unique(m.edges_sorted, axis=0, return_counts=True)
+        return int(np.sum(counts > 2))
 
     # Strategy 1: fast_simplification (ultra-fast C++ library)
     if HAS_FAST_SIMPLIFY:
@@ -47,12 +51,11 @@ def reduce_mesh(mesh: trimesh.Trimesh, target_factor: float = 0.5, target_faces:
             sim_v, sim_f = fs.simplify(mesh.vertices, mesh.faces, target_reduction=reduction_fraction)
             if len(sim_f) > 0:
                 cand = trimesh.Trimesh(vertices=sim_v, faces=sim_f, process=True)
-                # fast_simplification can pinch the surface into non-manifold edges; if it does,
-                # fall through to MeshLab's topology-preserving collapse instead.
-                if _nonmanifold(cand) <= nm_before or not HAS_PYMESHLAB:
+                if not HAS_PYMESHLAB or initial_faces > 100000 or _nonmanifold(cand) <= _nonmanifold(mesh):
                     reduced_mesh = cand
                     method_used = "fast_simplification"
-        except Exception:
+        except Exception as e:
+            log(f"fast_simplification skipped: {e}", "warn")
             reduced_mesh = None
 
     # Strategy 2: PyMeshLab Quadric Edge Collapse (topology preserving)
@@ -67,15 +70,17 @@ def reduce_mesh(mesh: trimesh.Trimesh, target_factor: float = 0.5, target_faces:
             res_m = ms.current_mesh()
             reduced_mesh = trimesh.Trimesh(vertices=res_m.vertex_matrix(), faces=res_m.face_matrix(), process=True)
             method_used = "pymeshlab"
-        except Exception:
+        except Exception as e:
+            log(f"PyMeshLab decimation skipped: {e}", "warn")
             reduced_mesh = None
 
     # Strategy 3: Trimesh simplify_quadric_decimation fallback
     if reduced_mesh is None:
         try:
-            reduced_mesh = mesh.simplify_quadric_decimation(target_count)
+            reduced_mesh = mesh.simplify_quadric_decimation(face_count=target_count)
             method_used = "trimesh_quadric"
-        except Exception:
+        except Exception as e:
+            log(f"Trimesh quadric simplification failed: {e}", "warn")
             reduced_mesh = mesh.copy()
             method_used = "failed_fallback"
 

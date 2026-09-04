@@ -1,6 +1,7 @@
 import pytest
 import trimesh
-from engine.model_loader import load_model, get_mesh_stats
+
+from engine.model_loader import get_mesh_stats, load_model
 
 
 @pytest.fixture

@@ -35,6 +35,8 @@ if not "%CODE%"=="0" (
     echo     install.bat -Recreate       build the environment again from scratch
     echo     install.bat -Check          show what Python this machine has
     echo     install.bat -NoOptional     install only the required packages
+    echo     install.bat -ComfyUI <path> specify ComfyUI install folder directly
+    echo     install.bat -SkipComfyUI    skip the ComfyUI nodes step
     echo.
 )
 pause

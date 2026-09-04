@@ -2,6 +2,159 @@
 
 All notable changes to Meshwright. Format based on [Keep a Changelog](https://keepachangelog.com).
 
+## [1.3.0] — 2026-09-04
+
+### Fixed
+- **Textured models were diagnosed as broken, and repair then destroyed them.** UV coordinates were
+  stored per vertex, which forces a vertex to be duplicated at every texture seam. That duplication
+  breaks the edge joining two triangles, so the analyser read a clean watertight model as a pile of
+  disconnected shells with hundreds of open holes — and repair closed holes that were never there.
+  A clean textured sphere GLB loaded as *Repair required, score 59, 9 shells*; decimating it to 25%
+  produced 201 shells; repair then turned 1,279 faces into 168,811. Meshwright now keeps texture
+  coordinates in a per-face-corner array beside the mesh, so the geometry stays welded and analysis,
+  repair and reduction all see the real topology. The same model now loads and survives the whole
+  pipeline as *Print ready, score 100, watertight, 0 shells*.
+- **Reducing or repairing a textured model slid the texture across the surface.** UVs were carried
+  over by matching each new triangle to the source triangle with the nearest *centroid*, then
+  projecting all three of its corners onto that one triangle and clamping anything that fell
+  outside — which snapped those corners onto the triangle's edge. Every corner is now projected to
+  its true closest point on the source surface, and corners that land across a UV seam are
+  re-evaluated inside the chart their own face belongs to. Measured against a known-exact UV map,
+  worst-case drift after decimating to 2% of the original face count fell from 394 texels to 0.46
+  on a 2048 px map; after repair, from 775 to 24.
+- **Decimation left the mesh as an unwelded triangle soup.** The old UV transfer computed every face
+  corner independently and could weld almost none of them back together, so a 1,280-face result came
+  back with 3,785 vertices instead of 642 — losing smooth shading, inflating exports and breaking
+  watertightness. Decimation now returns a properly welded mesh.
+- **Unwrapping a print-ready model reported it as broken.** Unwrap split vertices at every seam, so a
+  model scoring 100 dropped to 59 with "7 open holes" without a single triangle changing. Unwrapping
+  no longer touches the geometry.
+- **Unwrapping crashed the whole application on ordinary watertight models.** xatlas has a bug on
+  closed surfaces — where every edge has an opposite, which is exactly what a print-ready model is —
+  that leaves its boundary data unset and its convex-hull pass reading uninitialised memory
+  ([jpcy/xatlas#146](https://github.com/jpcy/xatlas/issues/146)). An 81,920-face sphere took the
+  window down with an access violation and no message. Meshwright now splits every model into open
+  patches before unwrapping, so xatlas is never given the input that breaks it, and the patches are
+  packed into one atlas so the result is still a single texture layout. The same sphere now unwraps
+  in about a second.
+- **Unwrapping large models silently produced overlapping UVs.** Above roughly 40,000 faces xatlas
+  stops segmenting and returns one chart covering the whole surface, with no error — measured UV
+  coverage of 1.02 to 1.57 in a unit square, where anything above 1.0 means charts sitting on top of
+  each other and a texture that smears. Every layout is now measured before it is accepted, and the
+  patches are halved and retried if it overlaps or if the texture density came out uneven.
+- **Unwrapping was extremely slow on dense models.** A 159,048-face surface took 121 seconds; it now
+  takes 3.9, with *lower* distortion. A 327,680-face model went from crashing to 2.4 seconds.
+- **Re-unwrapping a textured model silently scrambled it.** A new UV layout invalidates any texture
+  painted for the old one. Unwrap now asks first, and clears maps that no longer apply.
+- **A stray image file beat the texture the model actually declared.** Companion-file scanning ran
+  before the model's own material, so a leftover `*_diffuse.png` in the folder overrode the embedded
+  base colour. The material a file declares is now the authority; the folder scan fills the gaps.
+- **`metallicRoughness` texture files were ignored.** The standard glTF export name — what Sketchfab,
+  Blender and most exporters write — matched no pattern, so metallic and roughness were silently
+  lost, and with no separate base-colour file the packed map could be loaded as albedo. It is now
+  recognised and unpacked, alongside `metalRough`, `RMA` and `occlusionRoughnessMetallic`.
+- **`dilation_pixels=` was ignored by the seam dilator.** Every caller silently got the 16 px default,
+  including the ComfyUI node and the project's own test.
+- **Every successful UV unwrap reported an error.** A button reference was scoped to the wrong
+  function, so the handler threw before its success message.
+- **The UV island count was the mesh body count.** A sphere unwrapped into 7 charts reported "1
+  island". The real chart count now comes from xatlas, along with the atlas size.
+- **A recovered crash session inherited the previous model's textures.** `recover()` did not clear the
+  material set the way `load()` does.
+- **Texture failures were swallowed silently** by a bare `except: pass` around the texture state.
+- Exporting a texture pack wrote the same UV guide image twice, under two names.
+
+- **Every mesh operation re-sent the whole texture set.** A repair, a reduce, an undo or even a
+  rotate re-encoded all six maps to base64 and shipped them to the interface: 375 ms and 12.8 MB
+  each time, for data that had not changed. Results now carry a version number and a list of
+  channels; the maps are fetched only when that version moves. Ten operations in a row went from
+  about 3.7 seconds of encoding to 12 milliseconds.
+- **The MCP server returned megabytes of texture data to assistants.** `_strip()` dropped the binary
+  mesh preview but not the textures, so a single `repair` on a textured model returned 9.27 MB —
+  enough to swamp a context window. Tool results are now under a kilobyte.
+- **Texture seams could show dark fringes.** The gutters between UV islands were left empty, so GPU
+  filtering and mipmapping blended that emptiness into the edge of every island. Exported texture
+  packs, baked GLBs and textured OBJ/glTF exports now have their gutters padded. The maps held in
+  memory are untouched — padding is applied to copies on the way out.
+- **Generated normal maps had a false ridge along all four borders.** The gradient pass assumed the
+  source image tiled, so it read the opposite edge as if it were adjacent. It no longer does unless
+  you say the image tiles.
+
+- **Loading a dense FBX took minutes.** A 225 MB, 5-million-triangle model effectively hung: it
+  loaded in about 27 seconds, of which ten minutes and counting were spent re-projecting texture
+  coordinates that were already correct. Separating a multi-body model renumbers its faces, and the
+  commit step responded by projecting twenty million points onto a five-million-face surface to
+  recover a mapping it could have simply permuted. It now carries the permutation through and
+  reindexes, which is exact and instant.
+- **Row-wise de-duplication was the next bottleneck.** Deciding which edges are open, which faces
+  are duplicates and which corners can be welded all reduce to "which rows of this array are equal",
+  and `numpy.unique(axis=0)` answers that by sorting each row as a block of bytes. Packing each row
+  into a single 64-bit key instead is exact and several times quicker: building the viewport vertex
+  buffer went from 5.6 s to 1.8 s, and the diagnostics pass from 10.1 s to 7 s on the same model.
+  Where the values will not fit in a key, the original path still runs.
+- **The loader paid for a summary the application discards.** `load_model()` measured
+  watertightness, volume and area on every load — three seconds on a dense model — and the desktop
+  app threw the result away before running the full diagnostics. It is now optional.
+- The FBX index buffers are read with `np.fromiter`, and duplicate faces found with packed keys
+  rather than trimesh's row hash, together about a second and a half on a five-million-face model.
+- Hole counting no longer re-derives the open edges the diagnostics pass had already found.
+- **A failed file dialog was reported as if a file had been chosen.** The dialog methods return a
+  path, and the interface treats the return value as one. Wrapping them in the error decorator made
+  them answer with `{success: false, ...}` on failure — a truthy object that was then handed to the
+  loader as a path, so a dialog that could not open surfaced as *"path.split is not a function"*.
+  They now return an empty string in every failure case and log the real reason.
+- **Several viewport controls stopped repainting.** Moving to on-demand rendering saved the CPU an
+  idle 60 fps, but six methods that change the scene never asked for a frame: the light sliders, the
+  diagnostic locator, the piece highlighting, the displacement slider, the environment and the
+  preset views all appeared dead until the camera happened to move. Every scene-mutating method now
+  invalidates, and a test enumerates them so the next one cannot be forgotten.
+- **FBX polygons are triangulated with array arithmetic** rather than a Python loop over every
+  corner, and are covered by tests against a reference implementation for triangles, quads, n-gons
+  and meshes that mix them.
+- The UV worker no longer asks xatlas to pack an empty set, which wrote a complaint to a native
+  stderr the parent could not catch.
+
+- **Textures from Meshy and Hi3D models loaded flat.** Those generators embed a 2x2 placeholder in
+  the FBX material and ship the real 2048px maps as files beside it. Treating the material as
+  authoritative — correct in general — meant the placeholder won, so a fully textured model appeared
+  untextured. Placeholders are now ignored in favour of the real artwork. On a Meshy export that is
+  the difference between one 2x2 image and four 2048px maps.
+- **Smart retopology could take ten minutes and then close the application.** QuadriFlow can abort
+  inside Eigen on a mesh it dislikes, which in-process ends Meshwright mid-operation. It now runs in
+  a child process with a two-minute budget per piece; a crash or a stall falls through to uniform
+  remeshing, and the log says which engine did the work.
+- **Preparing a dense piece for smart retopology took 73 seconds.** Decimating five million faces to
+  two hundred thousand went straight to MeshLab's topology-preserving collapse. Doing it in two
+  steps — fast-simplification for the bulk, MeshFix to sew the surface closed — takes 27 seconds end
+  to end instead of 82, and the finished retopology deviated 4.95% from the original rather than
+  9.68%. MeshLab still runs when that chain cannot produce a manifold.
+- **The 2D UV view was unreadable on a dense model.** It drew one triangle in every few hundred,
+  which is a field of specks rather than a wireframe. It now draws the island outlines — the seams
+  and open edges that define the layout — and says that is what it is doing.
+- **The diagnostics crashed on a model with duplicate faces.** A refactor kept the totals and dropped
+  the masks the issue locations are built from, so clicking "Duplicate faces" raised a NameError.
+
+### Added
+- **Viewport detail.** A model too dense to draw quickly is shown simplified, with a slider in the
+  viewport toolbar to raise it to the full mesh and a message saying what is on screen. It is the
+  picture only: diagnostics, repair, reduce, retopology and export always use every triangle. A
+  five-million-triangle model's viewport payload drops from 148 MB to 27 MB.
+- **Image tiles seamlessly** option for PBR generation: blends the source edges and wraps the
+  surface gradients, for repeating materials.
+- **Displace** slider and a **Height** viewport channel, so the generated height map can be seen and
+  used instead of only exported.
+- Unwrapping now reports what it actually produced — islands, seam edges, atlas size and whether the
+  texture density came out even — instead of a chart count that was really the mesh's body count.
+- **New** button in the top bar (<kbd>Ctrl</kbd>+<kbd>N</kbd>) and <kbd>Delete</kbd> both close the
+  model and empty the workspace — mesh, undo history, autosave snapshot and textures — after a
+  confirmation. <kbd>Delete</kbd> still removes ticked pieces when the Separate pieces panel has a
+  selection.
+- OBJ, GLB and glTF exports now carry the model's UV coordinates and PBR maps. STL, PLY, OFF and 3MF
+  cannot store them and are unchanged.
+- `rtree` is now a required package. It bundles libspatialindex, installs as a pure wheel on every
+  supported Python, and provides the AABB queries behind the exact UV transfer. Without it the
+  transfer falls back to a slower KD-tree candidate search rather than failing.
+
 ## [1.2.0] — 2026-08-26
 
 ### Fixed

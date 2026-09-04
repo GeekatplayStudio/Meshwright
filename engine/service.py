@@ -1,39 +1,37 @@
 """
-MeshService — the single engine behind the desktop UI, the MCP server and
-the Python API. No UI framework here.
-
-Guarantees
-  * Every mutating call validates its input (engine.validation).
-  * Every accepted result becomes an immutable numbered state; undo/redo move
-    between states, nothing else ever moves backwards.
-  * A change that makes the mesh worse (more critical problems, or most of
-    the geometry gone) is rejected unless force=True — the previous state stays.
-  * Every accepted state is snapshotted to disk in the background for crash
-    recovery.
+MeshService — engine behind desktop UI, MCP server, ComfyUI nodes, and Python API.
 """
-import os
-import time
 import json
-import base64
+import os
 import threading
+import time
+
 import numpy as np
 import trimesh
-from trimesh.grouping import group_rows
 
 from engine import validation as V
-from engine.model_loader import load_model
 from engine.demo_model import DEMO_NAME, build_demo_mesh
+from engine.estimation import describe_duration, estimate_seconds
 from engine.mesh_analysis import analyze_mesh
-from engine.mesh_repair import repair_mesh
-from engine.mesh_reducer import reduce_mesh
 from engine.mesh_cleanup import fix_slivers
-from engine.mesh_retopo import retopologize, deviation
 from engine.mesh_exporter import EXPORT_FORMATS, export_to_format
+from engine.mesh_reducer import reduce_mesh
+from engine.mesh_repair import repair_mesh
+from engine.mesh_retopo import deviation, retopologize
+from engine.model_loader import load_model
+from engine.preview import DEFAULT_PREVIEW_FACES, build_mesh_preview
 from engine.session_store import SessionStore
+from engine.texture import MaterialManager
+from engine.texture import uv_channel as UV
+from engine.texture_service import TextureServiceMixin
 
 MAX_SHELLS = 200
 UNDO_DEPTH = 30
 SEVERITY_RANK = {"critical": 2, "warning": 1, "info": 0}
+
+# _commit's default: take the UV channel from the state being replaced and carry it
+# onto the new geometry. Passing uv= explicitly overrides that (load, unwrap).
+_INHERIT = object()
 
 
 class ServiceError(Exception):
@@ -41,41 +39,19 @@ class ServiceError(Exception):
 
 
 class _State:
-    __slots__ = ("id", "mesh", "analysis", "operation", "shells")
+    """One accepted mesh, plus the UV channel that belongs to it.
 
-    def __init__(self, sid, mesh, analysis, operation, shells):
+    `uv` is an (F, 3, 2) per-face-corner array or None. It travels with the state
+    rather than inside the mesh so that undo, redo and the safety guard all restore
+    geometry and texture coordinates together.
+    """
+
+    def __init__(self, sid, mesh, analysis, operation, shells, uv=None):
         self.id, self.mesh, self.analysis, self.operation, self.shells = sid, mesh, analysis, operation, shells
+        self.uv = uv
 
 
-def estimate_seconds(operation: str, faces: int) -> float:
-    """
-    Rough wall-clock estimate, measured on a mid-range desktop. Used only to warn
-    the user before a long operation and to drive the progress bar; never exact.
-    """
-    f = max(1, faces) / 1e6
-    return {
-        "load": 8 * f + 1,
-        "analyse": 4 * f + 0.2,
-        "repair": 25 * f + 0.5,
-        "fix_slivers": 30 * f + 0.3,
-        "simplify": 6 * f + 0.3,
-        "retopo": 45 * f + 3,
-    }.get(operation, 5 * f + 0.5)
-
-
-def describe_duration(seconds: float) -> str:
-    if seconds < 3:
-        return "a moment"
-    if seconds < 60:
-        return f"about {int(round(seconds / 5.0)) * 5} seconds"
-    import math
-    mins = seconds / 60.0
-    lo = max(1, int(mins))
-    hi = max(lo + 1, int(math.ceil(mins * 1.4)))
-    return f"about {lo}–{hi} minutes"
-
-
-class MeshService:
+class MeshService(TextureServiceMixin):
     def __init__(self, log=None, autosave: bool = True, progress=None):
         self.log = log or (lambda m, level="info": None)
         self._progress = progress or (lambda **kw: None)
@@ -87,6 +63,14 @@ class MeshService:
         self._redo = []
         self._next_id = 1
         self.history = []          # journal of accepted operations
+        self.materials = MaterialManager()
+        self._original_uv = None   # UV channel of the file as it was opened
+        # How much of the model the viewport draws. None lets it choose, so a dense
+        # model appears quickly; the interface can raise it to 1.0 on request. This
+        # only ever affects what is drawn — never the mesh, the diagnostics or an
+        # export.
+        self.preview_detail: float | None = None
+        self.preview_max_faces: int = DEFAULT_PREVIEW_FACES
 
     # ================================================================ state
     @property
@@ -100,6 +84,11 @@ class MeshService:
     @property
     def shells(self) -> list:
         return self.current.shells if self.current else []
+
+    @property
+    def corner_uv(self):
+        """Per-face-corner UVs of the current state, or None."""
+        return self.current.uv if self.current else None
 
     def _require(self) -> _State:
         if not self._states:
@@ -150,23 +139,39 @@ class MeshService:
 
     # ---------------------------------------------------------------- commit
     def _prepare(self, mesh: trimesh.Trimesh):
-        """Shell bookkeeping + analysis of the exact mesh we will keep."""
+        """
+        Shell bookkeeping + analysis of the exact mesh we will keep.
+
+        Returns (mesh, analysis, shells, face_order). Separating a multi-body model
+        renumbers its faces, and `face_order` says how: face i of the returned mesh
+        was face `face_order[i]` of the one passed in. It is None when nothing moved.
+
+        The components are found here rather than through `mesh.split()`, which does
+        the same work but throws the mapping away. Keeping it means a UV channel that
+        was already correct can simply be permuted, instead of being re-projected
+        onto geometry it already matched — on a five-million-face model that is the
+        difference between a hundred milliseconds and several minutes.
+        """
         shells = []
+        face_order = None
         try:
             bodies = int(mesh.body_count)
         except Exception:
             bodies = 1
         if bodies > 1:
             with self._timer(f"Separating {bodies} shells"):
-                parts = sorted(mesh.split(only_watertight=False), key=lambda p: len(p.faces), reverse=True)
-                if len(parts) > MAX_SHELLS:
+                groups = trimesh.graph.connected_components(
+                    mesh.face_adjacency, nodes=np.arange(len(mesh.faces)), min_len=1)
+                groups = sorted(groups, key=len, reverse=True)
+                if len(groups) > MAX_SHELLS:
                     self.log(f"Only the {MAX_SHELLS} largest shells are listed individually", "warn")
-                    parts = parts[:MAX_SHELLS] + [trimesh.util.concatenate(parts[MAX_SHELLS:])]
-                shells = parts
-                mesh = trimesh.util.concatenate(parts)
+                    groups = groups[:MAX_SHELLS] + [np.concatenate(groups[MAX_SHELLS:])]
+                shells = mesh.submesh(groups, only_watertight=False, append=False)
+                mesh = trimesh.util.concatenate(shells)
+                face_order = np.concatenate(groups) if len(groups) > 1 else np.asarray(groups[0])
         with self._timer("Analysing"):
             analysis = analyze_mesh(mesh, self.file_path or "")
-        return mesh, analysis, shells
+        return mesh, analysis, shells, face_order
 
     def _worse(self, before: dict, after: dict) -> str | None:
         """Reason the new state is unacceptable, or None."""
@@ -183,9 +188,44 @@ class MeshService:
             return "the result is empty"
         return None
 
+    def _carry_uv(self, source_mesh, source_uv, final_mesh, matches_source: bool, face_order):
+        """
+        Bring a UV channel onto the mesh that is about to be committed.
+
+        Three cases, cheapest first. The UVs already describe this geometry and the
+        faces did not move: use them. They describe it but the faces were permuted by
+        shell separation: permute them the same way, which is exact. Otherwise the
+        geometry genuinely changed, and every corner has to be re-projected onto the
+        old surface — the expensive path, and the only one that loses accuracy.
+        """
+        if source_uv is None or source_mesh is None:
+            return None
+
+        if matches_source and len(source_uv) == len(final_mesh.faces):
+            return source_uv
+        if matches_source and face_order is not None and len(source_uv) == len(face_order):
+            return np.ascontiguousarray(source_uv[face_order])
+
+        with self._job("uv_transfer", "Carrying texture coordinates across",
+                       faces=len(final_mesh.faces)):
+            carried = UV.transfer(source_mesh, source_uv, final_mesh)
+        if carried is None:
+            self.log("Texture coordinates could not be carried across this change", "warn")
+        return carried
+
     def _commit(self, mesh: trimesh.Trimesh, operation: str, detail: dict | None = None,
-                force: bool = False, guard: bool = True) -> dict:
-        mesh, analysis, shells = self._prepare(mesh)
+                force: bool = False, guard: bool = True, uv=_INHERIT) -> dict:
+        prev_state = self.current
+        if uv is _INHERIT:
+            src_mesh = prev_state.mesh if prev_state else None
+            src_uv = prev_state.uv if prev_state else None
+            same_faces = False           # the operation reshaped the mesh; re-project
+        else:
+            src_mesh, src_uv = mesh, uv
+            same_faces = True            # uv was built for exactly this mesh
+
+        mesh, analysis, shells, face_order = self._prepare(mesh)
+        new_uv = self._carry_uv(src_mesh, src_uv, mesh, same_faces, face_order)
         prev = self.current
         if guard and prev is not None and not force:
             reason = self._worse(prev.analysis, analysis)
@@ -194,7 +234,7 @@ class MeshService:
                 return {"success": False, "rejected": True, "reason": reason,
                         "would_be": {"verdict": analysis["verdict"], "score": analysis["score"]},
                         "state_id": prev.id}
-        st = _State(self._next_id, mesh, analysis, operation, shells)
+        st = _State(self._next_id, mesh, analysis, operation, shells, uv=new_uv)
         self._next_id += 1
         self._states.append(st)
         if len(self._states) > UNDO_DEPTH:
@@ -220,12 +260,23 @@ class MeshService:
                "can_undo": len(self._states) > 1, "can_redo": bool(self._redo)}
         if st.shells:
             out["shells"] = [{
-                "index": i, "faces": int(len(p.faces)), "watertight": bool(p.is_watertight),
+                "index": i, "faces": len(p.faces), "watertight": bool(p.is_watertight),
                 "size_mm": [round(float(x), 2) for x in p.extents],
                 "volume_cm3": round(abs(float(p.volume)) / 1000.0, 3) if p.is_watertight else None,
             } for i, p in enumerate(st.shells)]
             out["shell_face_counts"] = [len(p.faces) for p in st.shells]
-        out["preview"] = self.preview(st.mesh)
+        out["preview"] = self._build_preview(st)
+        out["has_uv"] = st.uv is not None
+        if "shell_face_counts" in out["preview"]:
+            # The viewport is drawing a decimated copy, so the piece sizes it needs
+            # to colour by are the decimated ones.
+            out["shell_face_counts"] = out["preview"]["shell_face_counts"]
+        try:
+            out["textures"] = self.get_texture_state()
+        except Exception as exc:
+            # Never let a texture problem hide a successful mesh operation, but do
+            # not let it vanish silently either.
+            self.log(f"Texture state unavailable: {exc}", "warn")
         if extra:
             out.update(extra)
         return out
@@ -240,15 +291,19 @@ class MeshService:
                           eta_text=describe_duration(2 + size_mb * 0.25))
             self.log(f"Opening {p} ({size_mb:.1f} MB)")
             t0 = time.perf_counter()
-            mesh, _ = load_model(p, log=self.log)
+            mesh, _ = load_model(p, log=self.log, with_stats=False)
+            corner_uv = mesh.metadata.pop("corner_uv", None)
             self.file_path = p
-            self.original = mesh.copy()
             self._states.clear()
             self._redo.clear()
             self.history.clear()
+            self.materials.clear()
             if self.store:
                 self.store.set_source(p)
-            res = self._commit(mesh, "load", guard=False)
+            mesh, corner_uv = self._detect_and_bind_textures(p, mesh, corner_uv)
+            self.original = mesh.copy()
+            self._original_uv = corner_uv
+            res = self._commit(mesh, "load", guard=False, uv=corner_uv)
             elapsed = time.perf_counter() - t0
             self.progress(state="done", operation="load", label=f"Loaded {os.path.basename(p)}",
                           elapsed=round(elapsed, 2))
@@ -256,13 +311,7 @@ class MeshService:
             return res
 
     def load_demo(self) -> dict:
-        """
-        Load the built-in test object.
-
-        Meshwright ships no models, so a fresh install has nothing to look at
-        until you open one of your own files. This gives every install something
-        to prove itself on: a deliberately broken object that Repair can fix.
-        """
+        """Load the built-in test object."""
         with self.lock:
             self.progress(state="start", operation="load", label="Loading the demo model",
                           faces=0, eta=1.0, eta_text="a moment")
@@ -270,9 +319,11 @@ class MeshService:
             mesh = build_demo_mesh()
             self.file_path = DEMO_NAME
             self.original = mesh.copy()
+            self._original_uv = None
             self._states.clear()
             self._redo.clear()
             self.history.clear()
+            self.materials.clear()
             if self.store:
                 self.store.set_source(DEMO_NAME)
             self.log("Loaded the built-in demo model: a sphere with a hole, "
@@ -282,6 +333,31 @@ class MeshService:
                           elapsed=round(time.perf_counter() - t0, 2))
             res["is_demo"] = True
             return res
+
+    def clear(self) -> dict:
+        """Drop the loaded model and return to an empty workspace.
+
+        Undo history, the autosave snapshot and the texture set all go with it:
+        after this the service is in the same state as a freshly started app.
+        """
+        with self.lock:
+            had_model = bool(self._states) or self.file_path is not None
+            name = os.path.basename(self.file_path) if self.file_path else None
+            self.file_path = None
+            self.original = None
+            self._original_uv = None
+            self._states.clear()
+            self._redo.clear()
+            self.history.clear()
+            self._next_id = 1
+            self.materials.clear()
+            if self.store:
+                # The snapshots describe a model we no longer hold; keeping them would
+                # offer a stale recovery on the next start.
+                self.store.reset()
+            if had_model:
+                self.log(f"Closed {name or 'the model'} — workspace is empty", "ok")
+            return {"success": True, "cleared": had_model, "closed_file": name}
 
     def analyze(self) -> dict:
         with self.lock:
@@ -396,7 +472,9 @@ class MeshService:
                     loc["points"] = np.round((r @ (pts - centre).T).T + centre, 3).tolist()
                     loc["center"] = np.round(r @ (np.asarray(loc["center"]) - centre) + centre, 3).tolist()
             analysis["stats"] = analyze_mesh(mesh, self.file_path or "")["stats"]
-            new = _State(self._next_id, mesh, analysis, "rotate", shells)
+            # A rigid transform leaves the topology alone, so the UV channel is
+            # still exactly right — carry it, do not re-project it.
+            new = _State(self._next_id, mesh, analysis, "rotate", shells, uv=st.uv)
             self._next_id += 1
             self._states.append(new)
             if len(self._states) > UNDO_DEPTH:
@@ -438,42 +516,34 @@ class MeshService:
             if self.original is None:
                 raise ServiceError("No model loaded.")
             self.log("Reverting to the original file (explicit request)", "warn")
-            return self._commit(self.original.copy(), "revert", guard=False)
+            return self._commit(self.original.copy(), "revert", guard=False, uv=self._original_uv)
 
     def state_list(self) -> list:
         return [{"id": s.id, "operation": s.operation, "verdict": s.analysis["verdict"], "score": s.analysis["score"],
                  "faces": s.analysis["stats"]["face_count"]} for s in self._states]
 
     # ---------------------------------------------------------------- recovery
-    @staticmethod
-    def recoverable_sessions() -> list:
-        return SessionStore.find_recoverable()
+    recoverable_sessions = staticmethod(SessionStore.find_recoverable)
+    discard_session = staticmethod(SessionStore.discard)
 
     def recover(self, session: str) -> dict:
         with self.lock:
-            sessions = {s["session"]: s for s in SessionStore.find_recoverable()}
-            if session not in sessions:
-                raise ServiceError("That session is no longer recoverable.")
-            info = sessions[session]
-            store = SessionStore(session_id=session)   # reopens the folder
-            store.journal["states"] = [info["last"]]
-            mesh = store.load_state(info["last"]["id"])
-            store._pool.shutdown(wait=False)
+            mesh, info = SessionStore.restore_session(session)
             if mesh is None:
-                raise ServiceError("Snapshot could not be read.")
+                raise ServiceError("Snapshot could not be read or session no longer recoverable.")
             self.file_path = info.get("source_file")
             self.original = mesh.copy()
+            # Snapshots hold geometry only, so anything the previous model had loaded
+            # would be applied to a mesh it does not belong to.
+            self._original_uv = None
             self._states.clear()
             self._redo.clear()
             self.history.clear()
+            self.materials.clear()
             self.log(f"Recovered state #{info['last']['id']} ({info['last']['operation']}) from session {session}", "ok")
-            res = self._commit(mesh, "recover", guard=False)
+            res = self._commit(mesh, "recover", guard=False, uv=None)
             SessionStore.discard(session)
             return res
-
-    @staticmethod
-    def discard_session(session: str):
-        SessionStore.discard(session)
 
     # ---------------------------------------------------------------- export
     def export_stl(self, path: str, scale_unit="mm", align_origin=True) -> dict:
@@ -486,7 +556,12 @@ class MeshService:
             p = V.output_path(path, f".{fmt}")
             unit = V.choice(scale_unit, "scale_unit", ("mm", "cm", "in"), "mm")
             with self._job("export", f"Exporting {os.path.basename(p)}"):
-                res = export_to_format(st.mesh, p, fmt, scale_unit=unit, align_origin=V.boolean(align_origin, True))
+                res = export_to_format(st.mesh, p, fmt, scale_unit=unit,
+                                       align_origin=V.boolean(align_origin, True),
+                                       corner_uv=st.uv,
+                                       material=self.materials.as_trimesh_material(corner_uv=st.uv))
+            if res.get("has_uv"):
+                self.log(f"Wrote UV coordinates and {res['texture_channels']} texture map(s) into the {fmt.upper()}", "ok")
             self.log(f"Saved {res['file_size_mb']} MB, {res['face_count']:,} faces", "ok")
             for w in res.get("warnings", []):
                 self.log(w, "warn")
@@ -529,19 +604,44 @@ class MeshService:
         return f"{base}-GS-{timestamp}-fixed{ext}"
 
     # ---------------------------------------------------------------- preview
-    @staticmethod
-    def preview(mesh: trimesh.Trimesh) -> dict:
-        v = np.ascontiguousarray(mesh.vertices, dtype=np.float32)
-        f = np.ascontiguousarray(mesh.faces, dtype=np.uint32)
-        edges = mesh.edges_sorted
-        groups = group_rows(edges, require_count=1) if len(edges) else []
-        b = np.ascontiguousarray(edges[groups], dtype=np.uint32) if len(groups) else np.zeros((0, 2), np.uint32)
-        return {
-            "vertices": base64.b64encode(v.tobytes()).decode("ascii"),
-            "faces": base64.b64encode(f.tobytes()).decode("ascii"),
-            "boundary_edges": base64.b64encode(b.tobytes()).decode("ascii"),
-            "face_count": int(len(f)),
-        }
+    preview = staticmethod(build_mesh_preview)
+
+    def _build_preview(self, st: _State) -> dict:
+        return build_mesh_preview(
+            st.mesh, st.uv,
+            max_faces=self.preview_max_faces,
+            shell_face_counts=[len(p.faces) for p in st.shells] if st.shells else None,
+            detail=self.preview_detail,
+        )
+
+    def set_preview_detail(self, fraction=None) -> dict:
+        """
+        Choose how much of the model the viewport draws, as a fraction of its faces.
+
+        None hands the choice back to Meshwright, which picks whatever keeps loading
+        quick. Nothing about the model changes — this is the display only, and the
+        result says exactly what is now on screen.
+        """
+        with self.lock:
+            st = self._require()
+            if fraction is None:
+                self.preview_detail = None
+            else:
+                self.preview_detail = float(V.number(fraction, "detail", 0.01, 1.0, 1.0))
+
+            with self._job("preview", "Rebuilding the viewport", faces=len(st.mesh.faces)):
+                preview = self._build_preview(st)
+
+            detail = preview["detail"]
+            self.log(f"Viewport now drawing {detail['faces_shown']:,} of "
+                     f"{detail['faces_total']:,} triangles "
+                     f"({detail['fraction'] * 100:.0f}%)", "ok")
+            out = {"success": True, "state_id": st.id, "preview": preview, "detail": detail}
+            if "shell_face_counts" in preview:
+                out["shell_face_counts"] = preview["shell_face_counts"]
+            elif st.shells:
+                out["shell_face_counts"] = [len(p.faces) for p in st.shells]
+            return out
 
     def close(self):
         if self.store:

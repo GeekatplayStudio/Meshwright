@@ -1,4 +1,5 @@
 import trimesh
+
 from engine.mesh_reducer import reduce_mesh
 
 
@@ -32,6 +33,7 @@ def test_reduce_tiny_mesh():
 def test_simplify_never_rejected_on_problem_mesh(tmp_path):
     import numpy as np
     import trimesh
+
     from engine.service import MeshService
     m = trimesh.creation.icosphere(subdivisions=4)
     rng = np.random.default_rng(1)

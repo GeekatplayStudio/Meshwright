@@ -319,3 +319,49 @@ select {
 .toast .bang { color: var(--bad); font-weight: 700; }
 .toast .warnmark { color: var(--warn); font-weight: 700; }
 body.working { cursor: progress; }
+
+/* 2D UV Unfold Modal */
+.uv-card {
+    width: 660px;
+    max-width: 95vw;
+    position: relative;
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.uv-modal-head h2 { font-size: 17px; font-weight: 600; color: var(--text); }
+.uv-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+.uv-canvas-box {
+    width: 100%;
+    aspect-ratio: 1;
+    max-height: 560px;
+    background: #141619;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+}
+.uv-canvas-box:active { cursor: grabbing; }
+.uv-canvas-box canvas { width: 100%; height: 100%; display: block; }
+
+/* Viewport detail: how much of a dense model is drawn. Display only. */
+.detail-seg { align-items: center; gap: 8px; padding: 0 10px; }
+.detail-seg .detail-label { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.detail-seg input[type=range] { width: 88px; margin: 0; }
+.detail-seg .detail-value { font-size: 12px; min-width: 34px; text-align: right; color: var(--text); }
+.detail-seg.reduced .detail-label,
+.detail-seg.reduced .detail-value { color: var(--warn); }
+.detail-seg input[type=range]:disabled { opacity: .4; }
+
+/* Note above the UV canvas when it is drawing island outlines, not every edge. */
+.uv-hint { margin: 0 0 8px; padding: 0 2px; }

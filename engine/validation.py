@@ -3,8 +3,9 @@ Input sanitization shared by every API surface (desktop UI, MCP, Python).
 Every public service method validates through these helpers so no caller
 can hand the engine a bad path, an out-of-range number or a malformed list.
 """
-import os
 import math
+import os
+
 import numpy as np
 
 LOAD_EXTENSIONS = {".obj", ".fbx", ".glb", ".gltf", ".stl", ".ply", ".3ds", ".dae", ".3mf", ".off"}

@@ -3,19 +3,28 @@ Mesh diagnostics: measures every print-relevant property of a mesh and
 turns it into a list of concrete issues plus a readiness score.
 """
 import os
+
 import numpy as np
 import trimesh
 from trimesh.grouping import group_rows
 
+from engine.indexing import duplicate_mask, quantise, unique_rows
+
 MAX_LOCATION_POINTS = 1500
 
 
-def _boundary_loops(mesh: trimesh.Trimesh) -> int:
-    """Count closed loops of boundary (open) edges = number of holes."""
+def _boundary_loops(mesh: trimesh.Trimesh, boundary_idx=None) -> int:
+    """
+    Count closed loops of boundary (open) edges = number of holes.
+
+    `boundary_idx` is the caller's own list of open-edge rows. Passing it in avoids
+    a second grouping pass over every edge in the mesh, which on a five-million-face
+    model is a second or so of work for an answer already in hand.
+    """
     edges = mesh.edges_sorted
     if len(edges) == 0:
         return 0
-    groups = group_rows(edges, require_count=1)
+    groups = group_rows(edges, require_count=1) if boundary_idx is None else boundary_idx
     if len(groups) == 0:
         return 0
     boundary = edges[groups]
@@ -27,7 +36,7 @@ def _boundary_loops(mesh: trimesh.Trimesh) -> int:
     adj = sp.coo_matrix((data, (boundary[:, 0], boundary[:, 1])), shape=(n, n))
     used = np.unique(boundary)
     comps, labels = connected_components(adj, directed=False)
-    return int(len(np.unique(labels[used])))
+    return len(np.unique(labels[used]))
 
 
 def analyze_mesh(mesh: trimesh.Trimesh, file_path: str = "") -> dict:
@@ -38,8 +47,8 @@ def analyze_mesh(mesh: trimesh.Trimesh, file_path: str = "") -> dict:
       score   - 0..100 print readiness
       verdict - short human summary
     """
-    v_count = int(len(mesh.vertices))
-    f_count = int(len(mesh.faces))
+    v_count = len(mesh.vertices)
+    f_count = len(mesh.faces)
 
     if f_count == 0:
         return {
@@ -54,28 +63,35 @@ def analyze_mesh(mesh: trimesh.Trimesh, file_path: str = "") -> dict:
     is_winding = bool(mesh.is_winding_consistent)
     is_volume = bool(mesh.is_volume)
 
-    # Edge topology
+    # Edge topology. One pass over the edge rows answers all of it: an edge shared
+    # by one face is a boundary, by more than two a non-manifold junction.
     edges = mesh.edges_sorted
-    boundary_idx = group_rows(edges, require_count=1) if len(edges) else np.array([], dtype=int)
-    boundary_edges = int(len(boundary_idx))
-    edge_groups = group_rows(edges)
-    nm_groups = [g for g in edge_groups if len(g) > 2]
-    nonmanifold_edges = int(len(nm_groups))
-    nm_verts = np.unique(edges[[g[0] for g in nm_groups]]) if nm_groups else np.array([], dtype=int)
+    first_edge, edge_of_row, edge_counts = unique_rows(edges)
+    boundary_idx = (np.flatnonzero(edge_counts[edge_of_row] == 1)
+                    if len(edges) else np.array([], dtype=int))
+    boundary_edges = len(boundary_idx)
+    nonmanifold_rows = first_edge[edge_counts > 2] if len(edges) else np.array([], dtype=int)
+    nonmanifold_edges = len(nonmanifold_rows)
+    nm_verts = np.unique(edges[nonmanifold_rows]) if nonmanifold_edges else np.array([], dtype=int)
     boundary_verts = np.unique(edges[boundary_idx]) if boundary_edges else np.array([], dtype=int)
-    holes = _boundary_loops(mesh) if boundary_edges else 0
+    holes = _boundary_loops(mesh, boundary_idx) if boundary_edges else 0
 
     # Face quality
     degen_mask = ~mesh.nondegenerate_faces()
     degenerate = int(degen_mask.sum())
-    sorted_faces = np.sort(mesh.faces, axis=1)
-    _, first_idx = np.unique(sorted_faces, axis=0, return_index=True)
-    dup_face_mask = np.ones(f_count, dtype=bool)
-    dup_face_mask[first_idx] = False
+    # The masks are kept, not just the totals: the issue list points at where the
+    # duplicates actually are so the user can find them in the viewport.
+    dup_face_mask = duplicate_mask(np.sort(mesh.faces, axis=1))
     duplicate_faces = int(dup_face_mask.sum())
-    _, first_v = np.unique(np.round(mesh.vertices, 6), axis=0, return_index=True)
-    dup_vert_mask = np.ones(v_count, dtype=bool)
-    dup_vert_mask[first_v] = False
+
+    # Vertices are compared to six decimals, so quantise and compare exactly.
+    rounded = quantise(mesh.vertices, 6)
+    if rounded is None:                       # coordinates too large to quantise
+        _, first_v = np.unique(np.round(mesh.vertices, 6), axis=0, return_index=True)
+        dup_vert_mask = np.ones(v_count, dtype=bool)
+        dup_vert_mask[first_v] = False
+    else:
+        dup_vert_mask = duplicate_mask(rounded)
     dup_verts = int(dup_vert_mask.sum())
     referenced = np.unique(mesh.faces)
     unref_mask = np.ones(v_count, dtype=bool)
@@ -111,7 +127,7 @@ def analyze_mesh(mesh: trimesh.Trimesh, file_path: str = "") -> dict:
         "file_path": file_path,
         "vertex_count": v_count,
         "face_count": f_count,
-        "edge_count": int(len(mesh.edges_unique)),
+        "edge_count": len(mesh.edges_unique),
         "body_count": bodies,
         "is_watertight": is_watertight,
         "is_winding_consistent": is_winding,

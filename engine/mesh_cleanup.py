@@ -214,7 +214,7 @@ def fix_slivers(mesh: trimesh.Trimesh, min_angle_deg: float = 1.0, max_passes: i
         "collapsed": collapsed_total,
         "flipped": flipped_total,
         "skipped": skipped,
-        "faces_before": int(len(mesh.faces)),
-        "faces_after": int(len(work.faces)),
+        "faces_before": len(mesh.faces),
+        "faces_after": len(work.faces),
     }
     return work, info

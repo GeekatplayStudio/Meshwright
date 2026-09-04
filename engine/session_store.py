@@ -5,13 +5,14 @@ Every accepted mesh state is written (in a background thread) as a compressed
 .npz next to a journal.json describing the operations. If the app dies, the
 next start finds the unfinished session and can restore the last good state.
 """
-import os
 import json
-import time
+import os
 import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
+
 import numpy as np
 import trimesh
-from concurrent.futures import ThreadPoolExecutor
 
 KEEP_STATES = 30
 
@@ -39,7 +40,7 @@ class SessionStore:
         v = np.ascontiguousarray(mesh.vertices, dtype=np.float64)
         f = np.ascontiguousarray(mesh.faces, dtype=np.int64)
         entry = {"id": state_id, "operation": operation, "time": time.strftime("%H:%M:%S"),
-                 "faces": int(len(f)), "vertices": int(len(v)), "summary": summary,
+                 "faces": len(f), "vertices": len(v), "summary": summary,
                  "file": f"state_{state_id:04d}.npz"}
         self._pool.submit(self._write_state, entry, v, f)
 
@@ -96,6 +97,24 @@ class SessionStore:
         """Block until queued snapshots are on disk."""
         self._pool.submit(lambda: None).result()
 
+    def reset(self):
+        """Forget the current model and start a clean journal in the same session.
+
+        Used when the workspace is emptied: the snapshots describe a model the
+        app no longer holds, so keeping them would offer a stale recovery.
+        """
+        self.flush()
+        with self._lock:
+            for entry in self.journal["states"]:
+                try:
+                    os.remove(os.path.join(self.dir, entry["file"]))
+                except OSError:
+                    pass
+            self.journal["source_file"] = None
+            self.journal["states"] = []
+            self.journal["closed"] = False
+            self._write_journal()
+
     def close(self, delete: bool = True):
         self.flush()
         with self._lock:
@@ -136,6 +155,18 @@ class SessionStore:
             found.append({"session": name, "source_file": j.get("source_file"), "last": last,
                           "states": len(j["states"])})
         return found
+
+    @classmethod
+    def restore_session(cls, session_id: str):
+        sessions = {s["session"]: s for s in cls.find_recoverable()}
+        if session_id not in sessions:
+            return None, None
+        info = sessions[session_id]
+        store = cls(session_id=session_id)
+        store.journal["states"] = [info["last"]]
+        mesh = store.load_state(info["last"]["id"])
+        store._pool.shutdown(wait=False)
+        return mesh, info
 
     @staticmethod
     def discard(session: str):

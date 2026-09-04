@@ -1,8 +1,13 @@
 import os
+
 import trimesh
-from engine.modules.printer_profiles import check_build_volume, PRINTER_PROFILES
-from engine.modules.color_printing import extract_color_information, export_to_3mf
-from engine.modules.part_separation import separate_disconnected_shells, slice_mesh_plane
+
+from engine.modules.color_printing import export_to_3mf, extract_color_information
+from engine.modules.part_separation import (
+    separate_disconnected_shells,
+    slice_mesh_plane,
+)
+from engine.modules.printer_profiles import PRINTER_PROFILES, check_build_volume
 
 
 def test_printer_profiles():

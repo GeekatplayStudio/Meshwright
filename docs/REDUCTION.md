@@ -62,3 +62,27 @@ Diagnostics panel says so immediately — and <kbd>Ctrl</kbd>+<kbd>Z</kbd> takes
 The presets go down to **500 faces**. Below a few hundred, use *Smart retopo* — quadric collapse
 produces increasingly ugly slivers at extreme ratios, while a quad field degrades gracefully.
 Check the deviation figure: at low-poly targets it is the only honest measure of what you lost.
+
+
+## Why smart retopology sometimes uses a different engine
+
+QuadriFlow builds a curvature-aligned quad field, and that optimisation either
+converges quickly or does not converge at all. Its running time cannot be predicted
+from the size of the input: measured on one model, from the same source at different
+decimation levels, it took 2 seconds at 20,000 faces, more than four minutes at 32,000
+and at 72,000, then 7.5 seconds at 189,000. It can also abort outright — an assertion
+failure inside Eigen, which in-process would close the application mid-operation.
+
+So Meshwright runs it in a child process and gives it two minutes per piece. If it
+crashes or does not converge, the piece falls through to uniform remeshing or quadric
+collapse, which are quick and predictable, and the log says which engine actually did
+the work. A result in two minutes beats a maybe-result in ten.
+
+Before QuadriFlow sees a dense piece it is decimated to something it can build a field
+on. That used to go straight to MeshLab's topology-preserving collapse, which is
+correct and slow — 73 seconds to take five million faces to two hundred thousand.
+Splitting it in two is quicker and better: fast-simplification does the bulk in five
+seconds but tears the surface, and MeshFix sews it closed in eleven while keeping 96%
+of the triangles. End to end on the same model that is 27 seconds instead of 82, and
+the finished retopology deviated 4.95% from the original rather than 9.68%. MeshLab
+still runs when that chain cannot produce a manifold.

@@ -1,5 +1,7 @@
 import os
+
 import trimesh
+
 from engine.stl_exporter import export_to_stl
 
 

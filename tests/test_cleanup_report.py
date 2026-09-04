@@ -1,8 +1,10 @@
 import json
+
 import numpy as np
 import trimesh
-from engine.mesh_cleanup import fix_slivers
+
 from engine.mesh_analysis import analyze_mesh
+from engine.mesh_cleanup import fix_slivers
 
 
 def _needle_box():

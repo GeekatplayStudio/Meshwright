@@ -5,6 +5,13 @@ import numpy as np
 import trimesh
 from trimesh.grouping import group_rows
 
+from engine.texture import uv_channel as UV
+
+# Formats that can actually carry texture coordinates. STL, OFF and 3MF cannot, so
+# a textured model exported to those is silently geometry-only — which is correct,
+# and is what a slicer wants anyway.
+UV_CAPABLE = ("obj", "glb", "gltf")
+
 
 # File types are the names understood by trimesh's exporter.  FBX is
 # intentionally absent: the project can import it through ufbx, but neither
@@ -44,7 +51,7 @@ def solidity_report(mesh: trimesh.Trimesh) -> dict:
     boundary_edges = 0
     if not watertight and len(mesh.faces):
         try:
-            boundary_edges = int(len(group_rows(mesh.edges_sorted, require_count=1)))
+            boundary_edges = len(group_rows(mesh.edges_sorted, require_count=1))
         except Exception:
             boundary_edges = 0
 
@@ -107,10 +114,20 @@ def prepare_for_export(mesh: trimesh.Trimesh, scale_unit: str = "mm", align_orig
 
 
 def export_to_format(mesh: trimesh.Trimesh, output_path: str, export_format: str = "stl",
-                     scale_unit: str = "mm", align_origin: bool = True) -> dict:
-    """Export a prepared mesh in one of the formats supported by trimesh."""
+                     scale_unit: str = "mm", align_origin: bool = True,
+                     corner_uv=None, material=None) -> dict:
+    """
+    Export a prepared mesh in one of the formats supported by trimesh.
+
+    For OBJ and glTF the per-corner UV channel is expanded to per-vertex first, so
+    the vertex split that a texture needs happens in the file and never in the mesh
+    Meshwright is holding.
+    """
     label, file_type = EXPORT_FORMATS[export_format]
-    export_mesh = prepare_for_export(mesh, scale_unit, align_origin)
+
+    textured = export_format in UV_CAPABLE and UV.is_valid(mesh, corner_uv)
+    source = UV.to_textured_mesh(mesh, corner_uv, material=material) if textured else mesh
+    export_mesh = prepare_for_export(source, scale_unit, align_origin)
     if export_format == "stl" and output_path.lower().endswith(".stl_ascii"):
         file_type = "stl_ascii"
 
@@ -129,8 +146,13 @@ def export_to_format(mesh: trimesh.Trimesh, output_path: str, export_format: str
         "format": label,
         "file_size_mb": round(file_size_bytes / (1024.0 * 1024.0), 2),
         "file_size_bytes": file_size_bytes,
-        "vertex_count": int(len(export_mesh.vertices)),
-        "face_count": int(len(export_mesh.faces)),
+        "vertex_count": len(export_mesh.vertices),
+        "face_count": len(export_mesh.faces),
+        "has_uv": bool(textured),
+        "texture_channels": int(sum(
+            getattr(material, name, None) is not None
+            for name in ("baseColorTexture", "normalTexture", "occlusionTexture", "metallicRoughnessTexture")
+        )) if textured and material is not None else 0,
         "is_watertight": solidity["is_watertight"],
         "is_solid": solidity["is_solid"],
         "avg_wall_mm": solidity["avg_wall_mm"],

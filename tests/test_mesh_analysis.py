@@ -1,4 +1,5 @@
 import trimesh
+
 from engine.mesh_analysis import analyze_mesh, compare_analyses
 from engine.mesh_repair import repair_mesh
 

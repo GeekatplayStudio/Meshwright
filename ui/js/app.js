@@ -26,6 +26,60 @@ document.addEventListener('DOMContentLoaded', () => {
         return bytes.buffer;
     }
 
+    /* Viewport detail. A dense model is drawn simplified so it appears quickly;
+       the mesh itself, the diagnostics and every export use all of it. */
+    const detailSlider = $('viewDetail'), detailSeg = $('segDetail'), detailValue = $('valDetail');
+    let detailPending = null;
+
+    function showDetail(detail) {
+        if (!detail || !detailSlider) return;
+        const pct = Math.round(detail.fraction * 100);
+        detailSlider.disabled = false;
+        detailSlider.value = Math.max(5, Math.min(100, pct));
+        detailValue.textContent = `${pct}%`;
+        detailSeg.classList.toggle('reduced', !!detail.reduced);
+
+        if (detail.reduced) {
+            toast('lod', { kind: 'info', title: `Viewport showing ${pct}% of this model`,
+                // Toast bodies are plain text, so no markup here.
+                body: `${fmt(detail.faces_total)} triangles is a lot to draw, so the view is simplified `
+                    + `to ${fmt(detail.faces_shown)} to keep things quick. Drag the Detail slider up for `
+                    + `the full mesh — diagnostics, repair, reduce and export always use every triangle.`,
+                ms: 14000 });
+        }
+    }
+
+    async function applyDetail(percent) {
+        if (!api() || !current) return;
+        detailSlider.disabled = true;
+        try {
+            const res = await api().set_preview_detail(percent >= 100 ? 1.0 : percent / 100);
+            if (!res || !res.success) { setStatus((res && res.error) || 'Could not change detail', 'error', 5000); return; }
+            if (window.viewer) {
+                window.viewer.loadGeometry({
+                    vertices: b64ToBuffer(res.preview.vertices),
+                    faces: b64ToBuffer(res.preview.faces),
+                    boundary_edges: b64ToBuffer(res.preview.boundary_edges),
+                    uvs: res.preview.uvs ? b64ToBuffer(res.preview.uvs) : null,
+                }, res.shell_face_counts || null);
+            }
+            showDetail(res.detail);
+        } catch (e) {
+            setStatus(`Could not change detail: ${e.message}`, 'error', 5000);
+        } finally {
+            detailSlider.disabled = false;
+        }
+    }
+
+    if (detailSlider) {
+        detailSlider.addEventListener('input', () => { detailValue.textContent = `${detailSlider.value}%`; });
+        detailSlider.addEventListener('change', () => {
+            clearTimeout(detailPending);
+            const wanted = +detailSlider.value;
+            detailPending = setTimeout(() => applyDetail(wanted), 150);
+        });
+    }
+
     function showModel(res) {
         if (res.preview && window.viewer) {
             const t = performance.now();
@@ -34,16 +88,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 vertices: b64ToBuffer(p.vertices),
                 faces: b64ToBuffer(p.faces),
                 boundary_edges: b64ToBuffer(p.boundary_edges),
+                uvs: p.uvs ? b64ToBuffer(p.uvs) : null,
             }, res.shell_face_counts || null);
             logLine(`Viewport updated in ${Math.round(performance.now() - t)} ms`, 'info');
         }
         $('emptyState').classList.add('hidden');
+        hasModel = true;
+        if (res.preview && res.preview.detail) showDetail(res.preview.detail);
         if (res.analysis) renderAnalysis(res.analysis);
         renderShells(res.shells || null);
         updateStateUI(res);
-        for (const id of ['btnRepair', 'btnReduce', 'btnExport', 'sliderReduce', 'targetInput']) $(id).disabled = false;
+        for (const id of ['btnRepair', 'btnReduce', 'btnExport', 'sliderReduce', 'targetInput', 'btnUnwrapUV', 'btnLoadTexture', 'btnOpenUv']) {
+            if ($(id)) $(id).disabled = false;
+        }
         document.querySelectorAll('.rot').forEach(b => b.disabled = false);
         updateTarget();
+
+        if (res.textures && window.meshwrightTexture) {
+            // Cheap: a summary, not the pixels. The texture panel re-fetches the maps
+            // itself only when their version has actually moved.
+            const summary = res.uv_layout ? { ...res.textures, uv_layout: res.uv_layout } : res.textures;
+            window.meshwrightTexture.applyTextureState(summary);
+        }
     }
 
     /* ---------- toasts & progress ----------
@@ -330,6 +396,91 @@ document.addEventListener('DOMContentLoaded', () => {
         if (api()) api().open_url(link.dataset.url); else window.open(link.dataset.url, '_blank');
     }));
 
+    /* ---------- ComfyUI installer modal ---------- */
+    async function showComfyUIInstaller() {
+        if ($('about')) closeAbout();
+        let detected = [];
+        try {
+            if (api() && api().detect_comfyui) {
+                const det = await api().detect_comfyui();
+                if (det && det.success) detected = det.paths || [];
+            }
+        } catch { /* ignore */ }
+
+        const defaultPath = detected.length ? detected[0] : '';
+        const bodyHtml = `
+            <p>Install the <strong>Geekatplay-3D-MeshFix</strong> custom nodes into ComfyUI so you can load, repair, reduce, and preview 3D meshes inside ComfyUI workflows.</p>
+            <div style="margin: 16px 0;">
+                <label style="display:block;margin-bottom:6px;font-size:13px;font-weight:600;">ComfyUI Directory (or custom_nodes folder):</label>
+                <div style="display:flex;gap:8px;margin-bottom:8px;">
+                    <input id="comfyPathInput" type="text" style="flex:1;padding:8px 10px;background:rgba(255,255,255,0.06);color:inherit;border:1px solid rgba(255,255,255,0.15);border-radius:4px;font-family:monospace;font-size:12px;" value="${defaultPath.replace(/\\/g, '\\\\')}" placeholder="e.g. D:\\ComfyUI">
+                    <button id="btnBrowseComfy" class="btn">Browse…</button>
+                </div>
+                ${detected.length > 1 ? `
+                    <div style="margin-top:6px;font-size:12px;color:rgba(255,255,255,0.7);">
+                        Detected installs:
+                        ${detected.map(p => `<button class="link btn-preset-comfy" data-p="${p.replace(/"/g, '&quot;')}" style="margin-right:8px;text-decoration:underline;">${p}</button>`).join('')}
+                    </div>
+                ` : ''}
+            </div>
+            <p class="hint">Creates <code>Geekatplay-3D-MeshFix</code> in <code>custom_nodes</code> and copies sample workflow <code>mesh_fix_workflow.json</code>.</p>
+        `;
+
+        openModal('Install ComfyUI 3D Nodes', bodyHtml, [
+            { label: 'Cancel' },
+            {
+                label: 'Install Nodes',
+                primary: true,
+                action: async () => {
+                    const chosen = ($('comfyPathInput').value || '').trim();
+                    if (!chosen) {
+                        toast('comfy-err', { kind: 'error', title: 'Path required', body: 'Please specify your ComfyUI path.' });
+                        return;
+                    }
+                    setStatus('Installing ComfyUI custom nodes…');
+                    try {
+                        const res = await api().install_comfyui_nodes(chosen);
+                        if (res && res.success) {
+                            setStatus('ComfyUI nodes installed successfully', 'ok', 5000);
+                            toast('comfy-ok', {
+                                kind: 'ok',
+                                title: 'ComfyUI Nodes Installed',
+                                body: `Installed to ${res.destination}. Drag & drop mesh_fix_workflow.json into ComfyUI to try it!`,
+                                ms: 12000
+                            });
+                        } else {
+                            setStatus(res.error || 'Installation failed', 'error', 6000);
+                            toast('comfy-fail', { kind: 'warn', title: 'Installation failed', body: res.error || 'Unknown error' });
+                        }
+                    } catch (e) {
+                        setStatus(`Error: ${e.message}`, 'error', 6000);
+                    }
+                }
+            }
+        ]);
+
+        const browseBtn = $('btnBrowseComfy');
+        if (browseBtn) {
+            browseBtn.addEventListener('click', async () => {
+                try {
+                    if (api() && api().select_folder_dialog) {
+                        const folder = await api().select_folder_dialog();
+                        if (folder) $('comfyPathInput').value = folder;
+                    }
+                } catch { /* ignore */ }
+            });
+        }
+        document.querySelectorAll('.btn-preset-comfy').forEach(b => {
+            b.addEventListener('click', () => {
+                $('comfyPathInput').value = b.dataset.p;
+            });
+        });
+    }
+
+    $('btnComfyUI').addEventListener('click', showComfyUIInstaller);
+    const btnAboutComfy = $('btnAboutComfyUI');
+    if (btnAboutComfy) btnAboutComfy.addEventListener('click', showComfyUIInstaller);
+
     /* ---------- keyboard shortcuts ---------- */
     const SHORTCUTS = [
         ['Ctrl+O', 'Open model'], ['Ctrl+S', 'Export model'], ['Ctrl+Shift+S', 'Save JSON report'],
@@ -337,7 +488,8 @@ document.addEventListener('DOMContentLoaded', () => {
         ['Ctrl+A', 'Select all pieces'], ['Delete', 'Remove selected pieces'], ['R', 'Rotation gizmo'],
         ['F', 'Fit view'], ['W', 'Wireframe'], ['E', 'Open-edge highlight'], ['G', 'Build plate'],
         ['1 – 7', 'Top · Front · Right · Iso · Bottom · Back · Left'], ['Esc', 'Clear highlight / close dialog'],
-        ['Ctrl+`', 'Console'], ['?', 'This list'],
+        ['Ctrl+`', 'Console'], ['Ctrl+N', 'Close model / start over'],
+        ['Del', 'Remove ticked pieces, or close the model'], ['?', 'This list'],
     ];
     function showHelp() {
         openModal('Keyboard shortcuts',
@@ -362,8 +514,15 @@ document.addEventListener('DOMContentLoaded', () => {
         else if (ctrl && k === 'u') { e.preventDefault(); fire('btnReanalyse'); }
         else if (ctrl && k === 'a') { if (!$('cardShells').classList.contains('hidden')) { e.preventDefault(); fire('btnShellsAll'); } }
         else if (ctrl && k === '`') { e.preventDefault(); fire('btnConsole'); }
+        else if (ctrl && k === 'n') { e.preventDefault(); requestReset(false); }
         else if (ctrl) { return; }
-        else if (k === 'delete' || k === 'backspace') { if (!$('cardShells').classList.contains('hidden')) { e.preventDefault(); fire('btnShellsRemove'); } }
+        else if (k === 'delete' || k === 'backspace') {
+            e.preventDefault();
+            // Delete removes the ticked pieces when there are any; otherwise it
+            // closes the whole model, always after a confirmation.
+            if (!$('cardShells').classList.contains('hidden') && !$('btnShellsRemove').disabled) fire('btnShellsRemove');
+            else requestReset(true);
+        }
         else if (k === 'escape') {
             if (!$('about').classList.contains('hidden')) closeAbout();
             else if (!$('modal').classList.contains('hidden')) closeModal();
@@ -579,6 +738,86 @@ document.addEventListener('DOMContentLoaded', () => {
         if (path) loadFile(path);
     });
 
+    /* ---------- close the model / start over ---------- */
+    let hasModel = false;
+
+    function clearWorkspaceUI() {
+        current = null;
+        hasModel = false;
+
+        if (window.viewer) window.viewer.reset();
+        if (window.meshwrightTexture) window.meshwrightTexture.resetTextureState();
+
+        $('emptyState').classList.remove('hidden');
+        $('report').classList.add('hidden');
+        $('cardShells').classList.add('hidden');
+        $('shellList').innerHTML = '';
+        $('shellCount').textContent = '';
+        $('fileName').textContent = '';
+        $('stateBadge').textContent = '';
+        $('reduceResult').textContent = '';
+        $('issueCount').textContent = '';
+        $('issueList').innerHTML = '<li class="muted">—</li>';
+        $('btnSlivers').classList.add('hidden');
+
+        const ring = $('scoreRing');
+        ring.style.setProperty('--pct', 0);
+        ring.style.setProperty('--ring-color', 'var(--line)');
+        $('scoreValue').textContent = '–';
+        $('verdict').textContent = 'No model loaded';
+        $('verdictSub').textContent = 'Open a file to run diagnostics. '
+            + 'Drag to orbit, scroll to zoom, right-drag to pan.';
+        for (const id of ['sFaces', 'sVerts', 'sEdges', 'sBodies', 'sDims', 'sVolume',
+                          'sArea', 'sWater', 'sWinding', 'sBoundary', 'sNonMan', 'sGenus']) {
+            if ($(id)) $(id).textContent = '–';
+        }
+
+        for (const id of ['btnRepair', 'btnReduce', 'btnExport', 'sliderReduce', 'targetInput',
+                          'btnUndo', 'btnRedo', 'btnRevert', 'btnReanalyse', 'btnReport',
+                          'btnShellsRemove', 'viewDetail']) {
+            if ($(id)) $(id).disabled = true;
+        }
+        if (detailSeg) detailSeg.classList.remove('reduced');
+        if (detailValue) detailValue.textContent = '100%';
+        if (detailSlider) detailSlider.value = 100;
+        document.querySelectorAll('.rot').forEach(b => b.disabled = true);
+        status.classList.add('hidden');
+    }
+
+    async function resetWorkspace() {
+        if (api()) {
+            try {
+                const res = await api().close_model();
+                if (res && res.success === false) {
+                    setStatus(res.error || 'Could not close the model', 'error', 5000);
+                    return;
+                }
+            } catch (e) {
+                setStatus(`Could not close the model: ${e.message}`, 'error', 5000);
+                return;
+            }
+        }
+        clearWorkspaceUI();
+        setStatus('Workspace cleared — open a model to start', 'ok', 3000);
+    }
+
+    /* Confirm before throwing work away; an unmodified model (state #1, straight
+       from disk) costs nothing to reopen, so that case goes straight through. */
+    function requestReset(force) {
+        if (!hasModel) { clearWorkspaceUI(); return; }
+        const modified = current && $('stateBadge').textContent !== 'state #1';
+        if (!force && !modified) { resetWorkspace(); return; }
+        const name = $('fileName').textContent || 'the current model';
+        openModal('Close the model?',
+            `<p><strong>${name}</strong> will be removed from the workspace.</p>
+             <p>${modified ? 'Unsaved changes and the whole undo history are discarded.'
+                           : 'Nothing has been changed, so nothing is lost.'}
+             Export first if you want to keep the result.</p>`,
+            [{ label: 'Keep working' }, { label: 'Close model', primary: true, action: resetWorkspace }]);
+    }
+
+    $('btnNew').addEventListener('click', () => requestReset(false));
+
     /* The demo model is built in memory by Python — nothing is downloaded and
        no file is written. It exists so a fresh install can be tried at once. */
     $('btnDemo').addEventListener('click', async () => {
@@ -604,7 +843,11 @@ document.addEventListener('DOMContentLoaded', () => {
     ['dragleave', 'drop'].forEach(ev => zone.addEventListener(ev, e => { e.preventDefault(); overlay.classList.add('hidden'); }));
     // The actual file path arrives via the Python-side drop handler (see app.py),
     // which calls window.meshwright.load(path).
-    window.meshwright = { load: loadFile, log: logLine, offerRecovery, progress: onProgress, toast };
+    window.meshwright = {
+        load: loadFile, log: logLine, offerRecovery, progress: onProgress, toast, showModel,
+        confirm: (title, bodyHtml, confirmLabel, onConfirm) => openModal(title, bodyHtml,
+            [{ label: 'Cancel' }, { label: confirmLabel, primary: true, action: onConfirm }]),
+    };
 
     /* ---------- repair ---------- */
     $('btnRepair').addEventListener('click', async () => {

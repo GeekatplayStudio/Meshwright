@@ -67,6 +67,69 @@ Pick an engine, set a target, press **Reduce polygons**. Presets go from 500 to 
 face count. The result line reports the surface deviation in millimetres — the honest measure of what
 you lost. Full guidance in [REDUCTION.md](REDUCTION.md).
 
+## Textures
+
+Meshwright keeps whatever textures came with your model, and keeps them lined up through
+repair and reduction.
+
+**What it picks up on open.** Textures baked into the file (GLB, glTF, FBX) are read from
+the model's own material. Textures the file only points at — an OBJ with its `.mtl`, or a
+folder of PNGs beside the model — are found by name, including the layouts Meshy, Tripo,
+Sketchfab and Blender export: `model.png`, `*_baseColor`, `*_Normal_OpenGL`, `*_Roughness`,
+`*_AO`, and packed `*_ORM` / `*_metallicRoughness` maps, which are unpacked into their
+separate channels. It also looks in `textures/`, `images/`, `materials/` and `.fbm`
+subfolders. If a file both declares a texture and has a stray image sitting beside it, the
+one the file declares wins.
+
+**Repair and Reduce keep the mapping.** Texture coordinates travel with the model through
+every operation, and the model stays a proper welded solid while they do — repairing or
+decimating a textured model does not turn it into a pile of pieces, and the diagnostics
+score reflects the real geometry. Worst-case drift after decimating to a fiftieth of the
+original face count is under half a texel on a 2048 px map.
+
+**Unwrap UVs** builds a fresh layout for a model that has none. It does not change the
+geometry at all: a watertight model stays watertight and its score does not move. If the
+model already has UVs, Meshwright asks first — a new layout invalidates any texture that
+was painted for the old one.
+
+Unwrapping reports what it produced: how many **islands** the layout has, how many
+**seam edges**, the atlas size, and whether the texture density came out even. An uneven
+result — some parts of the model getting noticeably more texture detail than others —
+means the shape is hard to flatten; it is a warning, not a failure, and the layout is
+still usable. Meshwright re-splits and retries automatically to get the evenness it can.
+
+Dense models are fine: a 327,000-face model unwraps in about two seconds. If the
+unwrapper cannot produce a usable layout at all you get a message saying so, not a
+crash — **Reduce** the model first, then unwrap.
+
+**If your textures look flat or missing**, check what came with the file. Some
+generators — Meshy and Hi3D among them — put a 2×2 placeholder inside the FBX and ship
+the real 2048px maps as separate PNGs beside it; Meshwright ignores the placeholder and
+uses the real files. And a model can simply have no UV coordinates: an untextured
+"generate" export from Meshy has none, and nothing can map a texture onto it until you
+**Unwrap UVs**.
+
+**Load Image / Generate PBR** derives normal, roughness, metallic, ambient-occlusion and
+height maps from any photo or texture.
+
+Tick **Image tiles seamlessly** if your source is a repeating material — the edges are
+then blended so it tiles without a visible join, and the surface detail carries across
+them. Leave it off for a photograph or a texture painted for this particular model;
+treating those as tiling stamps a hard fake ridge down all four borders of the normal
+map.
+
+**Displace** pushes the surface out along the height map, in millimetres. It moves real
+vertices, so it shows detail on a dense model and almost nothing on a low-poly one — the
+**Height** button in the viewport shows the map itself either way.
+
+**Export Maps** writes every channel plus a transparent UV guide you can open as a layer
+in Photoshop or GIMP; **Reload Maps** picks your edits back up. **Save Baked GLB** writes
+one self-contained file with the maps embedded.
+
+Anything Meshwright writes out has its seam gutters padded — the colour at the edge of
+each UV island is bled outward into the empty space around it, so the texture does not
+show dark fringes along the seams when a renderer filters or mipmaps it.
+
 ## Exporting
 
 Pick the **format** — STL, OBJ, PLY, OFF, GLB, glTF or 3MF — and the **source units** of your file
@@ -74,6 +137,10 @@ Pick the **format** — STL, OBJ, PLY, OFF, GLB, glTF or 3MF — and the **sourc
 it in X/Y and drop it to Z = 0. **Export** (<kbd>Ctrl</kbd>+<kbd>S</kbd>) writes the file; STL is
 binary. Files are named `<original>-GS-<timestamp>-fixed.<ext>` by default, so an export never
 overwrites the model you started from.
+
+OBJ, GLB and glTF carry your texture coordinates and maps out with the model. STL, PLY, OFF
+and 3MF have no way to store them, so those are written as geometry only — which is what a
+slicer wants anyway.
 
 ### “Saved, but this is not a printable solid”
 
@@ -134,6 +201,29 @@ Every change creates a **numbered state**, shown in the top bar.
   the next start offers to **recover** it. Snapshots live in `%LOCALAPPDATA%\Meshwright\sessions` and
   are removed on a clean exit.
 
+## Viewport detail
+
+A model with millions of triangles takes a while to draw, so Meshwright shows a
+simplified version of it and tells you: *"Viewport showing 18% of this model"*. Drag
+the **Detail** slider in the viewport toolbar up for the full mesh, or down if you
+want the view to spin more freely.
+
+This is the picture only. The diagnostics, repair, reduce, retopology and every export
+always use every triangle in the model — the number in the Geometry panel is the real
+one. While the view is simplified the open-edge overlay is switched off, because it
+would be marking edges of the simplified copy rather than of your model.
+
+## Starting over
+
+**New** in the top bar (<kbd>Ctrl</kbd>+<kbd>N</kbd>) closes the model and empties the
+workspace — mesh, history, diagnostics and textures. <kbd>Delete</kbd> does the same, unless
+you have pieces ticked in **Separate pieces**, in which case it removes those instead.
+Either way you are asked to confirm before anything with unsaved changes is thrown away.
+
 ## Keyboard
 
-Press <kbd>?</kbd> at any time for the full list.
+Press <kbd>?</kbd> at any time for the full list. The ones worth learning:
+<kbd>Ctrl</kbd>+<kbd>O</kbd> open · <kbd>Ctrl</kbd>+<kbd>N</kbd> close the model ·
+<kbd>Ctrl</kbd>+<kbd>Z</kbd> undo · <kbd>Ctrl</kbd>+<kbd>R</kbd> repair ·
+<kbd>Ctrl</kbd>+<kbd>S</kbd> export · <kbd>W</kbd> wireframe · <kbd>F</kbd> fit ·
+<kbd>1</kbd>–<kbd>7</kbd> standard views.

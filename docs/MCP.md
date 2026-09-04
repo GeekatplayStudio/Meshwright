@@ -60,7 +60,7 @@ low-poly), `isotropic` (uniform triangles), `quadric` (topology-preserving colla
 
 ## Result shape
 
-Every tool returns JSON. The heavy binary preview is stripped, so results stay small.
+Every tool returns JSON. The binary mesh preview and the texture maps are both stripped, so a result stays under a kilobyte even on a model with a full 2048px PBR set. What remains of the texture block says which channels exist, not what is in them.
 
 ```jsonc
 {

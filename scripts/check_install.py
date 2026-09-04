@@ -16,6 +16,9 @@ REQUIRED = [
     ("scipy", "numerics"),
     ("trimesh", "mesh core"),
     ("webview", "desktop window"),
+    ("PIL", "texture images"),
+    ("xatlas", "UV unwrapping"),
+    ("rtree", "exact UV transfer after repair and reduction"),
 ]
 
 OPTIONAL = [
@@ -29,9 +32,11 @@ OPTIONAL = [
     ("lxml", "3MF and DAE files"),
     ("shapely", "2D sections"),
     ("mcp", "MCP server for AI assistants"),
+    ("cv2", "texture gutter dilation"),
 ]
 
-DIST_NAMES = {"webview": "pywebview", "skimage": "scikit-image", "fast_simplification": "fast-simplification"}
+DIST_NAMES = {"webview": "pywebview", "skimage": "scikit-image",
+              "fast_simplification": "fast-simplification", "PIL": "pillow", "cv2": "opencv-python"}
 
 
 def _version(module_name):

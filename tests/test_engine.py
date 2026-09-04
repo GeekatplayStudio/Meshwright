@@ -1,17 +1,18 @@
 import os
 import sys
+
 import trimesh
 
 # Ensure root folder is in sys.path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from engine.model_loader import load_model, get_mesh_stats
-from engine.mesh_repair import repair_mesh
 from engine.mesh_reducer import reduce_mesh
-from engine.stl_exporter import export_to_stl
-from engine.modules.printer_profiles import check_build_volume
+from engine.mesh_repair import repair_mesh
+from engine.model_loader import get_mesh_stats, load_model
 from engine.modules.color_printing import extract_color_information
 from engine.modules.part_separation import separate_disconnected_shells
+from engine.modules.printer_profiles import check_build_volume
+from engine.stl_exporter import export_to_stl
 
 
 def run_tests():
