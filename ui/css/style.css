@@ -378,11 +378,11 @@ body.working { cursor: progress; }
    ========================================================================== */
 .walker {
     --walk-frames: 8;           /* drawings in the strip */
-    --walk-frame-w: 226px;      /* set by scripts/build_walk_frames.py */
+    --walk-frame-w: 233px;      /* set by scripts/build_walk_frames.py */
     --walk-frame-h: 220px;
     --walk-height: 124px;       /* how tall he is on screen */
-    --walk-cycle: 800ms;
-    --walk-cross: 26000ms;
+    --walk-cycle: 660ms;        /* eight drawings at 12fps */
+    --walk-cross: 13000ms;      /* JS re-times this to his stride */
 
     position: fixed;
     left: 0;
@@ -400,8 +400,9 @@ body.working { cursor: progress; }
 
 /* Right to left. When the work finishes he carries on from wherever he is at the
    same pace and walks out of frame, rather than snapping back or disappearing. */
-.walker.walking { animation: walker-cross var(--walk-cross) linear forwards; }
-.walker.leaving { animation: walker-exit var(--walk-exit, 1200ms) linear forwards; }
+.walker.walking { animation: walker-cross var(--walk-cross) linear infinite; }
+.walker.resuming,
+.walker.leaving  { animation: walker-exit var(--walk-exit, 1200ms) linear forwards; }
 
 @keyframes walker-cross {
     from { transform: translateX(calc(100vw + 100%)); }
@@ -413,19 +414,23 @@ body.working { cursor: progress; }
     to   { transform: translateX(-120%); }
 }
 
-/* The bob is its own layer so it keeps going while he crosses, and runs at twice
-   the step rate — one rise per footfall, which is what gives the springy gait. */
+/* The hop up on each step is drawn, not animated here: across the eight drawings
+   his body rises and falls twice while his feet stay on one ground line, which is
+   35px of lift — a sixth of his height. A CSS bob on top of that is a second bounce
+   at its own phase, and two bounces that do not agree read as a judder rather than
+   a walk. So this layer carries only what the drawings cannot: a slow lean, one
+   sway per full cycle against two footfalls, so the timings overlap instead of
+   marching together. */
 .walker-bob {
     width: 100%;
     height: 100%;
-    animation: walker-bob calc(var(--walk-cycle) / 2) ease-in-out infinite;
+    animation: walker-sway var(--walk-cycle) ease-in-out infinite;
     transform-origin: 50% 100%;
 }
 
-@keyframes walker-bob {
-    0%   { transform: translateY(0)      rotate(-1.2deg); }
-    45%  { transform: translateY(-7%)    rotate(0.6deg); }
-    100% { transform: translateY(0)      rotate(-1.2deg); }
+@keyframes walker-sway {
+    0%, 100% { transform: rotate(-1deg); }
+    50%      { transform: rotate(1deg); }
 }
 
 /* The sprite strip, stepped. steps() and no interpolation: it should snap between
@@ -465,6 +470,7 @@ body.working { cursor: progress; }
     animation: walker-breathe 2.4s ease-in-out infinite;
 }
 .walker.paused.walking,
+.walker.paused.resuming,
 .walker.paused.leaving { animation-play-state: paused; }
 
 @keyframes walker-breathe {
@@ -546,7 +552,7 @@ body.working { cursor: progress; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .walker.walking, .walker.leaving { animation-duration: 60s; }
+    .walker.walking, .walker.resuming, .walker.leaving { animation-duration: 60s; }
     .walker-bob, .walker-strip, .walker-balloon { animation: none; }
     .walker-strip { transform: translateX(0); }
 }

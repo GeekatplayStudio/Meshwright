@@ -48,3 +48,53 @@ def test_get_mesh_stats():
     assert stats["vertex_count"] == len(mesh.vertices)
     assert "dimensions_mm" in stats
     assert "volume_cm3" in stats
+
+
+def test_degenerate_and_duplicate_faces_are_both_dropped_with_their_uvs(tmp_path):
+    """
+    Cleanup runs in two passes, and each mask has to be measured against the faces
+    that are there when it is applied. Building both up front is wrong the moment
+    the first pass removes anything: the second mask is then too long, and the UV
+    channel it is applied to raises
+
+        IndexError: boolean index did not match indexed array along axis 0
+
+    A real 3.1-million-face model hit this on twelve degenerate triangles.
+    """
+    import numpy as np
+    import trimesh
+
+    box = trimesh.creation.box(extents=[10, 10, 10])
+    faces = np.vstack([
+        box.faces,
+        [[0, 0, 1], [2, 2, 3]],      # degenerate: removed by the first pass
+        box.faces[:4],               # duplicates: removed by the second
+    ])
+    dirty = trimesh.Trimesh(vertices=box.vertices, faces=faces, process=False)
+    dirty.visual = trimesh.visual.TextureVisuals(
+        uv=np.random.default_rng(0).random((len(box.vertices), 2)))
+
+    path = tmp_path / "dirty.glb"
+    dirty.export(path)
+
+    mesh, _ = load_model(str(path), with_stats=False)
+    corner_uv = mesh.metadata.get("corner_uv")
+
+    assert len(mesh.faces) == len(box.faces), "the junk faces should be gone"
+    assert corner_uv is not None, "the UV channel was dropped instead of following the masks"
+    assert len(corner_uv) == len(mesh.faces)
+
+
+def test_a_clean_mesh_keeps_every_face(tmp_path):
+    import numpy as np
+    import trimesh
+
+    box = trimesh.creation.box(extents=[10, 10, 10])
+    box.visual = trimesh.visual.TextureVisuals(
+        uv=np.random.default_rng(1).random((len(box.vertices), 2)))
+    path = tmp_path / "clean.glb"
+    box.export(path)
+
+    mesh, _ = load_model(str(path), with_stats=False)
+    assert len(mesh.faces) == len(box.faces)
+    assert len(mesh.metadata["corner_uv"]) == len(mesh.faces)

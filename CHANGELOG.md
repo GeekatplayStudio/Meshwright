@@ -16,6 +16,26 @@ All notable changes to Meshwright. Format based on [Keep a Changelog](https://ke
   because foot positions do not survive measurement: the lifted foot is clear of the ground, so a
   band across the bottom of a pose finds one foot rather than two.
 
+  He is drawn in colour on a transparent sheet, walks at twelve frames a second, and is timed by
+  his stride rather than by the clock — `PX_PER_CYCLE` sets how much ground two steps cover and
+  every journey's duration is derived from the distance, so he does not skate on a wide window. He
+  keeps walking for as long as the work takes rather than stopping off-screen after one crossing,
+  and a job that starts while he is walking out turns him round from where he stands instead of
+  snapping him back to the far edge. The speech balloon closes on a click elsewhere, on `Esc`, or
+  by itself after seven seconds, and he carries on walking when it does.
+
+  The hop on each step is in the drawings, not the stylesheet: the cutter aligns every pose on the
+  feet, which keeps the 35px of rise and fall the artist drew while planting him on one ground
+  line. A CSS bob on top runs at its own phase, and two bounces that disagree read as a judder — so
+  the layer that used to bob now only leans.
+
+### Fixed
+- **Loading a model could fail outright with `IndexError: boolean index did not match indexed
+  array`.** The two passes that drop degenerate and duplicate faces built both of their masks up
+  front. The first pass shortens the face array, so the second mask was then too long by exactly
+  the number of faces the first had removed, and any model with both kinds of bad face refused to
+  open. Each mask is now measured against the faces that are actually there when it is applied.
+
 ## [1.3.0] — 2026-09-04
 
 ### Fixed

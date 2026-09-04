@@ -87,6 +87,12 @@ def _background_mask(rgb: np.ndarray) -> np.ndarray:
     return reached
 
 
+def _sheet_has_alpha(sheet: Image.Image) -> bool:
+    if sheet.mode not in ("RGBA", "LA") and "transparency" not in sheet.info:
+        return False
+    return bool((np.asarray(sheet.convert("RGBA"))[:, :, 3] < 255).any())
+
+
 def _spans(occupied: np.ndarray) -> list[tuple[int, int]]:
     """Start and end of each run of True — the cells along one axis."""
     padded = np.concatenate([[False], occupied, [False]])
@@ -94,10 +100,24 @@ def _spans(occupied: np.ndarray) -> list[tuple[int, int]]:
     return list(zip(np.flatnonzero(edges == 1), np.flatnonzero(edges == -1)))
 
 
+def _ink_mask(sheet: Image.Image) -> np.ndarray:
+    """
+    True where the drawing is.
+
+    A sheet exported with transparency has already answered this, and its alpha is
+    better than anything inferred: it knows the difference between the paper and a
+    white highlight on the cup. Only a flat-backed sheet needs the flood fill.
+    """
+    if sheet.mode in ("RGBA", "LA") or "transparency" in sheet.info:
+        alpha = np.asarray(sheet.convert("RGBA"))[:, :, 3]
+        if (alpha < 255).any():
+            return alpha > 8               # ignore the faint fringe of a soft cutout
+    return ~_background_mask(np.asarray(sheet.convert("RGB")))
+
+
 def cut_cells(sheet: Image.Image):
     """Every drawing on the sheet, cut out and made transparent."""
-    rgb = np.asarray(sheet.convert("RGB"))
-    ink = ~_background_mask(rgb)
+    ink = _ink_mask(sheet)
 
     rows = [s for s in _spans(ink.sum(axis=1) > 0) if ink[s[0]:s[1]].sum() > MIN_CELL_PIXELS]
     cells = []
@@ -108,10 +128,14 @@ def cut_cells(sheet: Image.Image):
             if block.sum() < MIN_CELL_PIXELS:
                 continue
             ys, xs = np.nonzero(block)
-            cut = sheet.convert("RGBA").crop(
-                (left + xs.min(), top + ys.min(), left + xs.max() + 1, top + ys.max() + 1))
-            alpha = block[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
-            cut.putalpha(Image.fromarray((alpha * 255).astype(np.uint8)))
+            box = (left + xs.min(), top + ys.min(), left + xs.max() + 1, top + ys.max() + 1)
+            cut = sheet.convert("RGBA").crop(box)
+
+            # Keep the sheet's own alpha where it has one — its soft edges are part
+            # of the drawing. Only a mask we derived ourselves needs stamping on.
+            if not _sheet_has_alpha(sheet):
+                keep = block[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
+                cut.putalpha(Image.fromarray((keep * 255).astype(np.uint8)))
             cells.append(cut)
     return cells
 
@@ -211,9 +235,15 @@ def find_sheet() -> str | None:
     """The walk sheet sitting in ui/assets/walk, if one has been dropped there."""
     if not os.path.isdir(OUT_DIR):
         return None
-    candidates = [f for f in sorted(os.listdir(OUT_DIR))
+    candidates = [f for f in os.listdir(OUT_DIR)
                   if f.lower().endswith(SHEET_TYPES) and f.lower() not in GENERATED]
-    return os.path.join(OUT_DIR, candidates[0]) if candidates else None
+    if not candidates:
+        return None
+    # Newest wins, so dropping a revised sheet in beside the old one just works.
+    candidates.sort(key=lambda f: os.path.getmtime(os.path.join(OUT_DIR, f)), reverse=True)
+    if len(candidates) > 1:
+        print(f"{len(candidates)} sheets here; using the most recent ({candidates[0]})")
+    return os.path.join(OUT_DIR, candidates[0])
 
 
 def main(sheet_path: str | None = None) -> int:

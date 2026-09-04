@@ -205,14 +205,24 @@ def load_model(file_path: str, log=None, with_stats: bool = True) -> tuple[trime
     # simply the right thing to do.
     mesh.merge_vertices()
 
-    # update_faces drops rows, so the UV array has to follow the same masks.
+    # Dropping faces has to happen one pass at a time, and each mask has to be
+    # measured against the faces that are actually there when it is applied. Building
+    # both up front looks tidier and is wrong: the first pass shortens the array, so
+    # the second mask is then too long by however many faces the first one removed.
+    def drop(keep):
+        """Apply a keep-mask to the faces and to the UV channel together."""
+        nonlocal corner_uv
+        keep = np.asarray(keep)
+        if keep.dtype == bool and keep.all():
+            return
+        if corner_uv is not None:
+            corner_uv = corner_uv[keep]
+        mesh.update_faces(keep)
+
+    drop(mesh.nondegenerate_faces())
     # trimesh's own unique_faces() hashes each row; packing them into one integer
     # each answers the same question and is quicker on a dense mesh.
-    for mask in (np.asarray(mesh.nondegenerate_faces()),
-                 ~duplicate_mask(np.sort(mesh.faces, axis=1))):
-        if corner_uv is not None:
-            corner_uv = corner_uv[mask]
-        mesh.update_faces(mask)
+    drop(~duplicate_mask(np.sort(mesh.faces, axis=1)))
     mesh.remove_unreferenced_vertices()
 
     if corner_uv is not None and len(corner_uv) != len(mesh.faces):

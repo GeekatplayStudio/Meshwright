@@ -12,7 +12,7 @@ by [Geekatplay Studio](https://www.geekatplay.com) · Vladimir Chopine
 [![License](https://img.shields.io/badge/license-MIT-d9a441.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-3776ab.svg)](https://python.org)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-6ea8fe.svg)](#install)
-[![Tests](https://img.shields.io/badge/tests-258%20passing-4cc38a.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-283%20passing-4cc38a.svg)](tests/)
 [![MCP](https://img.shields.io/badge/MCP-ready-b06bd0.svg)](docs/MCP.md)
 
 [**☕ Support development**](https://geekatplay.gumroad.com/coffee) · [Quick start](#quick-start) · [Features](#what-it-does) · [Docs](docs/) · [MCP server](docs/MCP.md) · [Troubleshooting](#troubleshooting)
@@ -198,9 +198,14 @@ happening. Click him and he stops to ask whether you would like to buy Vlad a co
 <img src="docs/images/15-walker.png" width="900" alt="The cup character walking along the bottom of the window, with a speech balloon">
 </div>
 
-He is animated from a hand-drawn eight-frame cycle, stepped rather than tweened, with
-the bob and the lean running on their own clocks — overlapping timings that never quite
-line up are what make a rubber-hose walk read as drawn rather than as a sprite on rails.
+He is animated from a hand-drawn eight-frame cycle at twelve frames a second, stepped
+rather than tweened, and he is timed by his own stride rather than by the clock, so he
+covers the ground his feet claim to have covered instead of skating. The hop on each
+step is in the drawings themselves; the only thing the code adds is a slow lean on a
+different clock, because overlapping timings that never quite line up are what make a
+rubber-hose walk read as drawn rather than as a sprite on rails. He keeps walking for
+as long as the work takes, and if you start something else while he is on his way out
+he turns round from wherever he happens to be standing.
 
 ### 10 · Export
 
@@ -419,7 +424,7 @@ python -m venv .venv
 .venv\Scripts\python -m pip install -r requirements-dev.txt
 npm install       # vendors Three.js into ui/vendor and installs eslint
 
-npm test          # pytest, 258 tests
+npm test          # pytest, 283 tests
 npm run lint      # eslint + ruff
 npm run mcp       # start the MCP server
 ```

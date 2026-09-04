@@ -326,8 +326,29 @@ land between frames. And the bob, the lean and the balloon's wobble all run on
 different clocks from the walk — overlapping timings that never quite line up are
 what make a rubber-hose walk read as drawn rather than as a sprite on rails.
 
-The drawings are generated from the walk sheet by `scripts/build_walk_frames.py` and
-are not in the repository. Without them the cup simply never appears.
+The vertical hop is deliberately *not* one of those clocks. Across the eight drawings
+his body rises and falls twice while his feet stay on a single ground line, which the
+cutter preserves when it aligns them; a CSS bob on top runs at its own phase, and two
+bounces that disagree read as a judder rather than a walk. The layer that used to bob
+now only leans.
+
+Duration is derived, never set: `PX_PER_CYCLE` says how much ground two steps cover,
+and every journey's length is computed from the distance it has to travel. A fixed
+duration means a wider window makes him walk faster while his legs move at the same
+rate, which is what skating is.
+
+He has three positions, not two — crossing, walking out, and *resuming*, which is the
+walk out reversed into a walk back when a second job starts before he has gone. It
+exists so that nothing can ever teleport him: every transition begins from the
+transform he is actually on, read back out of the computed style.
+
+The strip is generated from the walk sheet by `scripts/build_walk_frames.py` and is
+committed, because Meshwright ships as a ZIP and nobody should have to run a build step
+to get the cup. `tests/test_walker_states.py` checks the committed strip against the
+frame width the CSS declares, so recutting a sheet at a different size fails loudly
+instead of quietly slicing every frame down the middle. If the strip is missing the cup
+simply never appears — `walker.js` waits for the image's `load` event before he is
+allowed on screen, rather than walking an empty rectangle across the window.
 
 ## The preview payload
 
