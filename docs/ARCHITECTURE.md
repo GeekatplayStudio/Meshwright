@@ -312,6 +312,23 @@ decimation levels, 2 s at 20,000 faces, over four minutes at 32,000 and 72,000, 
 7.5 s at 189,000. There is no input size that makes it reliable, which is why the
 answer is a bounded wait and a good fallback rather than tuning.
 
+## The walking cup
+
+`ui/js/walker.js` hangs off the progress events the engine already emits, so it turns
+up for loads, repairs, reductions and exports without any of them knowing it exists.
+
+Two details are worth keeping if it is ever touched. The sprite is an image eight
+frames wide translated inside a one-frame window, not a `background-position`
+animation: a percentage in `translateX` is a percentage of the element itself, so
+`-12.5%` of an eight-frame strip is exactly one frame, while `background-position`
+percentages are measured against the difference between the box and the image and
+land between frames. And the bob, the lean and the balloon's wobble all run on
+different clocks from the walk — overlapping timings that never quite line up are
+what make a rubber-hose walk read as drawn rather than as a sprite on rails.
+
+The drawings are generated from the walk sheet by `scripts/build_walk_frames.py` and
+are not in the repository. Without them the cup simply never appears.
+
 ## The preview payload
 
 The viewport never receives an STL. `MeshService.preview` sends raw `Float32` vertices, `Uint32`

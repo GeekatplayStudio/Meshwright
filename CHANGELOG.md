@@ -2,6 +2,20 @@
 
 All notable changes to Meshwright. Format based on [Keep a Changelog](https://keepachangelog.com).
 
+## [Unreleased]
+
+### Added
+- **A cup who waits with you.** While the engine is busy, a hand-drawn cup strolls along the bottom
+  of the window and leaves when the work is done. Click him and he stops, under a speech balloon,
+  to ask whether you would like to buy Vlad a coffee.
+
+  He is animated from an eight-frame walk sheet cut by `scripts/build_walk_frames.py`, which lifts
+  the background without hollowing out a character drawn in white, checks the cycle order against
+  the drawing, and lines every pose up on the ground so he walks rather than skates. The order is
+  read from how the body rises and falls — a walk bounces once per step, twice over eight drawings —
+  because foot positions do not survive measurement: the lifted foot is clear of the ground, so a
+  band across the bottom of a pose finds one foot rather than two.
+
 ## [1.3.0] — 2026-09-04
 
 ### Fixed

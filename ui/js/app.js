@@ -185,7 +185,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /* Called from Python for every long operation. */
+    /* The cup who walks along the bottom while the engine works. */
+    const walker = () => window.meshwrightWalker;
+
     function onProgress(ev) {
+        if (walker()) {
+            if (ev.state === 'start') walker().start(ev.label);
+            else walker().stop();
+        }
         const key = ev.operation || 'job';
         if (ev.state === 'start') {
             const faces = ev.faces ? `${fmt(ev.faces)} faces · ` : '';
@@ -744,6 +751,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function clearWorkspaceUI() {
         current = null;
         hasModel = false;
+        if (walker()) walker().reset();
 
         if (window.viewer) window.viewer.reset();
         if (window.meshwrightTexture) window.meshwrightTexture.resetTextureState();

@@ -213,6 +213,15 @@ always use every triangle in the model — the number in the Geometry panel is t
 one. While the view is simplified the open-edge overlay is switched off, because it
 would be marking edges of the simplified copy rather than of your model.
 
+## The cup
+
+While Meshwright is busy — opening a file, repairing, reducing, exporting — a small
+cup strolls along the bottom of the window and leaves when the work is done. He is
+there so you can see at a glance that something is still happening.
+
+Click him and he stops to ask whether you would like to buy Vlad a coffee. Click the
+balloon to open the page, or click anywhere else to send him on his way.
+
 ## Starting over
 
 **New** in the top bar (<kbd>Ctrl</kbd>+<kbd>N</kbd>) closes the model and empties the

@@ -188,7 +188,21 @@ Everything also goes to the activity console with timestamps, and to stdout, so 
 <br><em>Every backend step, with timings.</em>
 </div>
 
-### 9 · Export
+### 9 · Someone to wait with
+
+While the engine is busy a small cup strolls along the bottom of the window and
+leaves when the work is done, so you can see at a glance that something is still
+happening. Click him and he stops to ask whether you would like to buy Vlad a coffee.
+
+<div align="center">
+<img src="docs/images/15-walker.png" width="900" alt="The cup character walking along the bottom of the window, with a speech balloon">
+</div>
+
+He is animated from a hand-drawn eight-frame cycle, stepped rather than tweened, with
+the bob and the lean running on their own clocks — overlapping timings that never quite
+line up are what make a rubber-hose walk read as drawn rather than as a sprite on rails.
+
+### 10 · Export
 
 STL, OBJ, PLY, OFF, GLB, glTF or 3MF with source-unit scaling (mm / cm / in) and build-plate alignment, plus a **JSON report** of the diagnostics and every operation applied — good for client sign-off or a print-farm audit trail.
 
