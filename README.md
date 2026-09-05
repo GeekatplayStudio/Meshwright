@@ -12,7 +12,7 @@ by [Geekatplay Studio](https://www.geekatplay.com) · Vladimir Chopine
 [![License](https://img.shields.io/badge/license-MIT-d9a441.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-3776ab.svg)](https://python.org)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-6ea8fe.svg)](#install)
-[![Tests](https://img.shields.io/badge/tests-314%20passing-4cc38a.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-318%20passing-4cc38a.svg)](tests/)
 [![MCP](https://img.shields.io/badge/MCP-ready-b06bd0.svg)](docs/MCP.md)
 
 [**☕ Support development**](https://geekatplay.gumroad.com/coffee) · [Quick start](#quick-start) · [Features](#what-it-does) · [Docs](docs/) · [MCP server](docs/MCP.md) · [Troubleshooting](#troubleshooting)
@@ -174,7 +174,7 @@ Every change creates a **numbered state**.
 
 ### 8 · Always know what it is doing
 
-Long operations announce themselves before they start — how many faces they are about to process and roughly how long it will take — then show a live timer and progress bar in the bottom-right corner.
+Long operations announce themselves before they start — how many faces they are about to process and roughly how long it will take — then show a live timer and progress bar in the bottom-right corner, synchronized with a glowing top-of-viewport progress bar and center-screen loading animations. Loading progress stays active throughout file reading, geometry conversion, and WebGL GPU buffer preparation.
 
 <div align="center">
 <img src="docs/images/13-progress.png" width="900" alt="Progress notification during a long operation">
@@ -425,7 +425,7 @@ python -m venv .venv
 .venv\Scripts\python -m pip install -r requirements-dev.txt
 npm install       # vendors Three.js into ui/vendor and installs eslint
 
-npm test          # pytest, 314 tests
+npm test          # pytest, 318 tests
 npm run lint      # eslint + ruff
 npm run mcp       # start the MCP server
 ```

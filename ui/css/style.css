@@ -54,6 +54,18 @@ body.resizing #webgl { pointer-events: none; }
 
 /* Viewport */
 .viewport { position: relative; background: var(--bg); overflow: hidden; }
+.global-progress {
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: rgba(255,255,255,.06); z-index: 50; overflow: hidden;
+    pointer-events: none;
+}
+.global-progress-bar {
+    height: 100%; width: 0;
+    background: linear-gradient(90deg, var(--accent), #22d3ee);
+    box-shadow: 0 0 10px rgba(34, 211, 238, .7);
+    border-radius: 0 2px 2px 0;
+    transition: width .25s ease-out;
+}
 #webgl { position: absolute; inset: 0; }
 #webgl canvas { display: block; }
 .viewport-empty {
@@ -61,6 +73,14 @@ body.resizing #webgl { pointer-events: none; }
     gap: 8px; color: var(--muted); pointer-events: none;
 }
 .viewport-empty svg { width: 56px; height: 56px; opacity: .35; margin-bottom: 6px; }
+.empty-spinner {
+    width: 44px; height: 44px;
+    border: 3px solid rgba(255,255,255,.1);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+    margin-bottom: 12px;
+}
 .viewport-empty p { font-size: 14px; color: var(--text); opacity: .7; }
 .viewport-empty small { font-size: 11px; letter-spacing: .5px; }
 .viewport-empty small.note { letter-spacing: 0; opacity: .75; margin-top: 2px; }

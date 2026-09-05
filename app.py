@@ -7,7 +7,9 @@ all validation, state handling and autosave live in the service.
 """
 import json
 import os
+import queue
 import sys
+import threading
 import time
 import traceback
 
@@ -19,6 +21,28 @@ from engine.service import MeshService, ServiceError
 from engine.validation import ValidationError
 
 _state = {'window': None}
+_eval_queue: queue.Queue = queue.Queue()
+
+
+def _eval_worker():
+    """Background worker draining JS evaluation tasks without blocking the engine."""
+    while True:
+        try:
+            script = _eval_queue.get()
+            win = _state['window']
+            if win is not None:
+                try:
+                    win.evaluate_js(script)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        finally:
+            _eval_queue.task_done()
+
+
+_eval_thread = threading.Thread(target=_eval_worker, daemon=True)
+_eval_thread.start()
 
 
 def log(message: str, level: str = "info"):
@@ -28,23 +52,12 @@ def log(message: str, level: str = "info"):
         print(line, flush=True)
     except (UnicodeEncodeError, OSError):
         print(line.encode("ascii", "replace").decode("ascii"), flush=True)
-    win = _state['window']
-    if win is not None:
-        try:
-            win.evaluate_js(f"window.meshwright && window.meshwright.log({json.dumps(message)}, {json.dumps(level)})")
-        except Exception:
-            pass
+    _eval_queue.put(f"window.meshwright && window.meshwright.log({json.dumps(message)}, {json.dumps(level)})")
 
 
 def progress(**event):
     """Forward a progress event to the UI (toast + progress bar)."""
-    win = _state['window']
-    if win is None:
-        return
-    try:
-        win.evaluate_js(f"window.meshwright && window.meshwright.progress({json.dumps(event)})")
-    except Exception:
-        pass
+    _eval_queue.put(f"window.meshwright && window.meshwright.progress({json.dumps(event)})")
 
 
 def _guarded(fn):

@@ -5,6 +5,15 @@ All notable changes to Meshwright. Format based on [Keep a Changelog](https://ke
 ## [Unreleased]
 
 ### Added
+- **Reliable model loading progress and global visual feedback.** Selecting or dropping a file now
+  immediately activates loading feedback on the client side, rather than waiting for an engine roundtrip.
+  A glowing amber-to-cyan progress bar pinned to the top of the 3D viewport animates in synchronization
+  with background jobs, accompanied by an animated loading spinner and active status prompt in the
+  empty workspace. The Python-to-WebView bridge dispatches UI events through a dedicated non-blocking
+  background queue, eliminating WebView2 semaphore deadlocks and dropped events.
+- **Continuous 2D UV island boundary contours.** The 2D UV Island Unfold viewer now extracts true
+  closed 2D boundary loops directly in UV space, rendering crisp continuous outlines against active
+  PBR texture channels rather than disjoint floating specks.
 - **A cup who waits with you.** Opening a model or writing one out sends a hand-drawn cup strolling
   along the bottom of the window; he leaves when the work is done. Repairs, reductions, unwraps and
   previews keep their progress toast and nothing more — he is on screen for the waits that are about
@@ -32,6 +41,15 @@ All notable changes to Meshwright. Format based on [Keep a Changelog](https://ke
   the layer that used to bob now only leans.
 
 ### Fixed
+- **Loading progress bar disappeared before the 3D model was visible on screen.** Python previously
+  emitted `state: 'done'` before returning the model data across the desktop IPC bridge. The frontend
+  dismissed the toast and progress bar immediately, leaving several seconds of heavy base64 decoding
+  and WebGL geometry buffer upload with zero visual indication that work was continuing. The progress bar
+  is now held through the Three.js rendering stage and dismisses only when the model is rendered.
+- **Unwrapping UVs removed loaded textures from the 3D model.** Generating or adjusting a UV unwrap
+  previously cleared all active materials (`self.materials.clear()`), wiping out albedo, normal and
+  roughness maps and resetting the viewport to plain plastic. Textures are now preserved across unwraps
+  and remain mapped onto the surface and displayed in the 2D unfold view.
 - **An FBX with its texture baked inside loaded as a grey model, or crashed the program.** Three
   faults in a row on the same file, a 228 MB Hi3D export carrying an 8192×8192 JPEG:
 

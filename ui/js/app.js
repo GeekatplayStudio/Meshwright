@@ -120,6 +120,53 @@ document.addEventListener('DOMContentLoaded', () => {
        while they run, and report the real elapsed time when they finish. */
     const toastBox = $('toasts');
     const toasts = new Map();          // key -> {el, timer, started, eta, raf}
+    const globalProgressEl = $('globalProgress');
+    const globalProgressBar = $('globalProgressBar');
+    let globalProgressHideTimer = null;
+
+    function showGlobalProgress(pct) {
+        if (!globalProgressEl) return;
+        clearTimeout(globalProgressHideTimer);
+        globalProgressEl.classList.remove('hidden');
+        if (pct != null && globalProgressBar) {
+            globalProgressBar.style.width = `${Math.max(0, Math.min(100, pct))}%`;
+        }
+    }
+
+    function hideGlobalProgress(now = false) {
+        if (!globalProgressEl) return;
+        clearTimeout(globalProgressHideTimer);
+        if (now) {
+            globalProgressEl.classList.add('hidden');
+            if (globalProgressBar) globalProgressBar.style.width = '0%';
+        } else {
+            if (globalProgressBar) globalProgressBar.style.width = '100%';
+            globalProgressHideTimer = setTimeout(() => {
+                globalProgressEl.classList.add('hidden');
+                if (globalProgressBar) globalProgressBar.style.width = '0%';
+            }, 350);
+        }
+    }
+
+    function setLoadingUI(loading, label) {
+        const spinner = $('emptySpinner');
+        const svg = $('emptySvg');
+        const prompt = $('emptyPrompt');
+        const demo = $('btnDemo');
+        if (spinner && svg && prompt) {
+            if (loading) {
+                spinner.classList.remove('hidden');
+                svg.classList.add('hidden');
+                if (label) prompt.textContent = label;
+                if (demo) demo.disabled = true;
+            } else {
+                spinner.classList.add('hidden');
+                svg.classList.remove('hidden');
+                prompt.textContent = 'Drop a model here or open one';
+                if (demo) demo.disabled = false;
+            }
+        }
+    }
 
     function dismissToast(key) {
         const t = toasts.get(key);
@@ -129,6 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
         t.el.classList.add('leaving');
         setTimeout(() => t.el.remove(), 200);
         toasts.delete(key);
+        activeOps.delete(key);
     }
 
     function toast(key, { kind = 'info', title, body = '', sticky = false, ms = 6000, progress = false } = {}) {
@@ -173,6 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
         t.started = performance.now();
         const timeEl = t.el.querySelector('.toast-time');
         const bar = t.el.querySelector('.toast-bar i');
+        showGlobalProgress(0);
         const tick = () => {
             if (!toasts.has(key)) return;
             const s = (performance.now() - t.started) / 1000;
@@ -180,7 +229,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (etaSeconds > 0) {
                 // asymptotic: approaches but never reaches 100% until it really finishes
                 const frac = 1 - Math.exp(-s / etaSeconds);
-                bar.style.width = `${Math.min(96, frac * 96).toFixed(1)}%`;
+                const pct = Math.min(95, frac * 95);
+                bar.style.width = `${pct.toFixed(1)}%`;
+                showGlobalProgress(pct);
             }
             t.raf = requestAnimationFrame(tick);
         };
@@ -198,27 +249,68 @@ document.addEventListener('DOMContentLoaded', () => {
        you are waiting on a step rather than on the file. */
     const walker = () => window.meshwrightWalker;
     const WALKS_FOR = new Set(['load', 'export', 'bake_glb']);
+    const activeOps = new Set();
+    let isModelLoading = false;
 
     function onProgress(ev) {
+        const key = ev.operation || 'job';
         // start and stop have to agree on the set, or a job he ignored would still
         // count down the one he is actually walking for.
         if (walker() && WALKS_FOR.has(ev.operation)) {
-            if (ev.state === 'start') walker().start(ev.label);
-            else walker().stop();
+            if (ev.state === 'start') {
+                if (!activeOps.has(key)) walker().start(ev.label);
+            } else if (activeOps.has(key) && !(ev.operation === 'load' && isModelLoading)) {
+                walker().stop();
+            }
         }
-        const key = ev.operation || 'job';
         if (ev.state === 'start') {
+            activeOps.add(key);
             const faces = ev.faces ? `${fmt(ev.faces)} faces · ` : '';
             toast(key, { kind: 'busy', title: ev.label, body: `${faces}${ev.eta_text}`, sticky: true, progress: true });
             runProgress(key, ev.eta || 0);
             document.body.classList.add('working');
             logLine(`${ev.label} — ${ev.eta_text}`);
+        } else if (ev.state === 'progress') {
+            const t = toasts.get(key);
+            if (t) {
+                if (ev.label) t.el.querySelector('.toast-title').textContent = ev.label;
+                if (ev.body) {
+                    const bodyEl = t.el.querySelector('.toast-body');
+                    bodyEl.textContent = ev.body;
+                    bodyEl.classList.remove('hidden');
+                }
+                if (ev.percent != null) {
+                    const bar = t.el.querySelector('.toast-bar i');
+                    if (bar) bar.style.width = `${Math.max(0, Math.min(100, ev.percent))}%`;
+                    showGlobalProgress(ev.percent);
+                }
+            }
         } else if (ev.state === 'done') {
+            if (ev.operation === 'load' && isModelLoading) {
+                const el = toasts.get(key);
+                if (el) {
+                    cancelAnimationFrame(el.raf);
+                    const bar = el.el.querySelector('.toast-bar i');
+                    if (bar) bar.style.width = '92%';
+                    el.el.querySelector('.toast-title').textContent = (ev.label || 'Loading').replace(/…$/, '') + '…';
+                    const bodyEl = el.el.querySelector('.toast-body');
+                    bodyEl.textContent = 'Rendering 3D viewport…';
+                    bodyEl.classList.remove('hidden');
+                }
+                showGlobalProgress(92);
+                return;
+            }
+            activeOps.delete(key);
             const el = toasts.get(key);
             if (el) { cancelAnimationFrame(el.raf); el.el.querySelector('.toast-bar i').style.width = '100%'; }
+            hideGlobalProgress(false);
             toast(key, { kind: 'ok', title: ev.label.replace(/…$/, ''), body: `Finished in ${ev.elapsed}s`, ms: 5000 });
             document.body.classList.remove('working');
         } else if (ev.state === 'error') {
+            activeOps.delete(key);
+            const el = toasts.get(key);
+            if (el) cancelAnimationFrame(el.raf);
+            hideGlobalProgress(true);
             toast(key, { kind: 'error', title: ev.label, body: ev.error || 'Failed', ms: 10000 });
             document.body.classList.remove('working');
         }
@@ -759,13 +851,49 @@ document.addEventListener('DOMContentLoaded', () => {
         setStatus(`Loading ${name}…`);
         openConsole(true);
         $('report').classList.add('hidden');
+        setLoadingUI(true, `Loading ${name}…`);
+        isModelLoading = true;
+        const t0 = performance.now();
+        onProgress({
+            state: 'start',
+            operation: 'load',
+            label: `Loading ${name}`,
+            eta: 4.0,
+            eta_text: 'reading model…'
+        });
         try {
             const res = await api().load_model_file(path);
-            if (!res.success) { setStatus(res.error, 'error', 6000); return; }
+            if (!res.success) {
+                isModelLoading = false;
+                onProgress({ state: 'error', operation: 'load', label: `Failed loading ${name}`, error: res.error });
+                setStatus(res.error, 'error', 6000);
+                return;
+            }
+            onProgress({
+                state: 'progress',
+                operation: 'load',
+                label: `Rendering ${name}…`,
+                percent: 92,
+                body: 'Preparing 3D geometry…'
+            });
+            await new Promise(r => requestAnimationFrame(r));
             showModel(res);
+            isModelLoading = false;
+            const elapsed = ((performance.now() - t0) / 1000).toFixed(2);
+            onProgress({
+                state: 'done',
+                operation: 'load',
+                label: `Loaded ${name}`,
+                elapsed: elapsed
+            });
             setStatus(`Analysed ${name}`, 'ok', 2500);
         } catch (e) {
+            isModelLoading = false;
+            onProgress({ state: 'error', operation: 'load', label: `Failed loading ${name}`, error: e.message });
             setStatus(`Failed: ${e.message}`, 'error', 6000);
+        } finally {
+            isModelLoading = false;
+            setLoadingUI(false);
         }
     }
 
@@ -781,6 +909,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function clearWorkspaceUI() {
         current = null;
         hasModel = false;
+        isModelLoading = false;
+        setLoadingUI(false);
+        hideGlobalProgress(true);
         if (walker()) walker().reset();
 
         if (window.viewer) window.viewer.reset();
@@ -863,16 +994,52 @@ document.addEventListener('DOMContentLoaded', () => {
         setStatus('Building the demo model…');
         openConsole(true);
         $('report').classList.add('hidden');
+        setLoadingUI(true, 'Building demo model…');
+        isModelLoading = true;
+        const t0 = performance.now();
+        onProgress({
+            state: 'start',
+            operation: 'load',
+            label: 'Building demo model',
+            eta: 1.0,
+            eta_text: 'a moment…'
+        });
         try {
             const res = await api().load_demo_model();
-            if (!res.success) { setStatus(res.error, 'error', 6000); return; }
+            if (!res.success) {
+                isModelLoading = false;
+                onProgress({ state: 'error', operation: 'load', label: 'Failed loading demo model', error: res.error });
+                setStatus(res.error, 'error', 6000);
+                return;
+            }
+            onProgress({
+                state: 'progress',
+                operation: 'load',
+                label: 'Rendering demo model…',
+                percent: 92,
+                body: 'Preparing 3D geometry…'
+            });
+            await new Promise(r => requestAnimationFrame(r));
             showModel(res);
+            isModelLoading = false;
+            const elapsed = ((performance.now() - t0) / 1000).toFixed(2);
+            onProgress({
+                state: 'done',
+                operation: 'load',
+                label: 'Loaded demo model',
+                elapsed: elapsed
+            });
             setStatus('Demo model loaded — press Repair to see it fixed', 'ok', 5000);
             toast('demo', { kind: 'info', title: 'Built-in demo model',
                 body: 'A sphere with a hole, a patch of flipped faces and a loose second piece. ' +
                       'This is a test object, not a printable part.', ms: 9000 });
         } catch (e) {
+            isModelLoading = false;
+            onProgress({ state: 'error', operation: 'load', label: 'Failed loading demo model', error: e.message });
             setStatus(`Failed: ${e.message}`, 'error', 6000);
+        } finally {
+            isModelLoading = false;
+            setLoadingUI(false);
         }
     });
 
@@ -928,14 +1095,48 @@ document.addEventListener('DOMContentLoaded', () => {
         [{ label: 'Cancel' }, { label: 'Revert', primary: true, action: doRevert }]));
     async function doRevert() {
         setStatus('Reverting to the file as loaded…');
+        isModelLoading = true;
+        const t0 = performance.now();
+        onProgress({
+            state: 'start',
+            operation: 'load',
+            label: 'Reverting to original',
+            eta: 1.0,
+            eta_text: 'restoring model…'
+        });
         try {
             const res = await api().revert_to_original();
-            if (!res.success) { setStatus(res.error, 'error', 5000); return; }
+            if (!res.success) {
+                isModelLoading = false;
+                onProgress({ state: 'error', operation: 'load', label: 'Revert failed', error: res.error });
+                setStatus(res.error, 'error', 5000);
+                return;
+            }
             $('report').classList.add('hidden');
+            onProgress({
+                state: 'progress',
+                operation: 'load',
+                label: 'Rendering original…',
+                percent: 92,
+                body: 'Updating 3D viewport…'
+            });
+            await new Promise(r => requestAnimationFrame(r));
             showModel(res);
+            isModelLoading = false;
+            const elapsed = ((performance.now() - t0) / 1000).toFixed(2);
+            onProgress({
+                state: 'done',
+                operation: 'load',
+                label: 'Reverted to original',
+                elapsed: elapsed
+            });
             setStatus('Reverted to original', 'ok', 3000);
         } catch (e) {
+            isModelLoading = false;
+            onProgress({ state: 'error', operation: 'load', label: 'Revert failed', error: e.message });
             setStatus(`Revert failed: ${e.message}`, 'error', 5000);
+        } finally {
+            isModelLoading = false;
         }
     }
 
