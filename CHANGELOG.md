@@ -32,6 +32,14 @@ All notable changes to Meshwright. Format based on [Keep a Changelog](https://ke
   the layer that used to bob now only leans.
 
 ### Fixed
+- **A reduced model showed a wrong colour on a handful of triangles near its seams.** Carrying UVs
+  through an edit rebuilds some corners from a neighbouring triangle, which extends that triangle's
+  plane and can land a hair past the edge of the texture sheet — measured 0.0077 outside on 108 of
+  119,994 corners taking a 2.96M-face model down to 40,000. The viewer samples with repeat wrapping,
+  so a hair past the edge fetches a colour from the opposite side of the atlas, on about a hundred
+  faces. The transfer now holds its answer inside the range the source itself used, which leaves a
+  deliberately tiled layout untouched.
+
 - **Loading a model could fail outright with `IndexError: boolean index did not match indexed
   array`.** The two passes that drop degenerate and duplicate faces built both of their masks up
   front. The first pass shortens the face array, so the second mask was then too long by exactly

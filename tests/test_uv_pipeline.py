@@ -140,8 +140,16 @@ def test_re_unwrap_asks_before_replacing_a_layout(service, textured_glb):
 
     forced = service.unwrap_uvs(force=True)
     assert forced["success"] is True
-    # The loaded maps belonged to the old layout, so they must not linger.
-    assert service.materials.has_textures() is False
+    # Loaded maps are preserved as reference for the new layout
+    assert service.materials.has_textures() is True
+
+
+def test_wireframe_lines_continuous_contours(service, textured_glb):
+    service.load(textured_glb)
+    layout = service.get_uv_layout(max_edges=50)
+    assert layout["has_uv"] is True
+    assert layout["edge_count"] > 0
+    assert len(layout["lines"]) == layout["edge_count"] * 4
 
 
 # ------------------------------------------------------------------ texture discovery

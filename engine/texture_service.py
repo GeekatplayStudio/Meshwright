@@ -50,8 +50,7 @@ class TextureServiceMixin:
                 corner_uv, stats = unwrap_corner_uv(st.mesh)
 
             if replacing and self.materials.has_textures():
-                self.materials.clear()
-                self.log("Loaded texture maps dropped — they belong to the previous UV layout", "warn")
+                self.log("Loaded texture maps preserved as reference for the unfolded UV layout", "info")
 
             res = self._commit(st.mesh.copy(), "unwrap_uv", detail=stats, guard=False, uv=corner_uv)
             self.log(f"UV layout: {stats['islands']} island(s), {stats['seam_edges']:,} seam edge(s), "

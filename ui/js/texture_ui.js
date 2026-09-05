@@ -165,7 +165,7 @@
 
             if (res && res.needs_confirm) {
                 const lost = res.has_textures
-                    ? 'The texture maps loaded for this model will be cleared, because they belong to the old layout.'
+                    ? 'The texture maps loaded for this model will be preserved as reference, but belong to the old layout.'
                     : 'Anything already painted against the old layout will no longer line up.';
                 confirmModal('Replace the existing UV layout?',
                     `<p>This model already has UV coordinates. Unwrapping builds a completely new layout.</p>
@@ -262,6 +262,9 @@
         ['albedo', 'normal', 'roughness', 'metallic', 'ao', 'height'].forEach(ch => {
             if (textureMaps[ch]) {
                 const img = new Image();
+                img.onload = () => {
+                    if ($('uvModal') && !$('uvModal').classList.contains('hidden')) renderUvCanvas();
+                };
                 img.src = textureMaps[ch];
                 channelImages[ch] = img;
             }
@@ -407,6 +410,15 @@
 
         uvZoom = 1.0;
         uvPan = { x: 0, y: 0 };
+
+        // Default to albedo if textures exist and channel is currently none
+        if (activeChannel === 'none' && (channelImages.albedo || (textureMaps && textureMaps.albedo))) {
+            activeChannel = 'albedo';
+            document.querySelectorAll('#uvChannelSeg button').forEach(b => b.classList.remove('active'));
+            const albBtn = document.querySelector('#uvChannelSeg button[data-uvchannel="albedo"]');
+            if (albBtn) albBtn.classList.add('active');
+        }
+
         renderUvCanvas();          // draw the frame immediately, fill it in below
         await ensureUvLayout();
         renderUvCanvas();
@@ -460,7 +472,7 @@
         // UV Wireframe lines
         if (uvData && uvData.lines && uvData.lines.length) {
             ctx.strokeStyle = activeChannel === 'none' ? '#22d3ee' : '#f0c364';
-            ctx.lineWidth = Math.max(0.6, 1.0 / uvZoom);
+            ctx.lineWidth = Math.max(0.8, 1.2 / uvZoom);
             ctx.beginPath();
             const lines = uvData.lines;
             for (let i = 0; i < lines.length; i += 4) {

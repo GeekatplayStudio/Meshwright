@@ -204,6 +204,44 @@ would close the window without a word; one process spawn is cheap insurance. The
 imports nothing from Meshwright — numpy and xatlas only — so it can be launched by file
 path with no `sys.path` setup.
 
+### What the layouts actually measure
+
+`tests/test_uv_unfold.py` rasterises the atlas rather than trusting `validate()`,
+which screens on total UV area and so cannot see a small island resting on a big one.
+Across spheres, boxes, tori, cylinders, capsules, an open surface, a multi-part model
+and the sample models, every layout comes back with **0.000% of used texels claimed
+twice**, a round trip of **under 0.2% of model size** at the 99th percentile, and
+texel spread between 1.00 and 1.34. Unwrapping leaves vertex positions bit-identical;
+it reorders the face table, and the per-corner UVs are reordered with it.
+
+### Two things the unfold does not do
+
+**Chart handedness is not consistent.** Between 11% and 50% of faces come back
+reflected — walking the surface anticlockwise from outside walks *clockwise* across
+the texture. Authored layouts do not look like this: a Meshy export measures
+2,964,400 faces one way round and none the other. It costs nothing while Meshwright
+is both writing and sampling through the same coordinates, which is why the round
+trip is exact regardless. It costs something the moment a person paints on the
+exported UV guide, because lettering on a reflected island comes back mirrored.
+
+The cause is xatlas's packer, which mirrors charts to pack them tighter and offers no
+option not to. `ChartOptions.fix_winding` is about face winding inside a chart and
+does not address it (measured: it moved a box from 8 reflected faces to 4, and made a
+torus worse). Reflecting the charts ourselves afterwards does not work either, because
+the packer nests charts into each other's concavities — a reflected chart stays inside
+its own bounding box and still collides, measured at 1.9% of texels on a sphere.
+Correcting this properly means packing the atlas ourselves and accepting whatever
+utilisation a rectangle packer gives up against xatlas's nesting.
+
+**Decimation across a UV seam leaves a few stretched triangles.** When a collapse
+merges geometry from two different islands, the new triangle's corners genuinely
+belong to different parts of the atlas and no single chart holds all three. Taking a
+2.96M-face model to 40,000: **46 faces, 0.115%, holding 0.90% of the UV area**, the
+worst at 36× normal texel density. At 200,000 faces it is 287 faces, 0.144%. Two
+alternatives were measured and both were worse — clamping the barycentric
+extrapolation gives 71 such faces, and searching for the nearest source face inside
+the anchor's own chart gives 63. The current code is the best of the three.
+
 ## Texture data is fetched, not pushed
 
 Encoding a six-channel 2048px PBR set to base64 costs about 375 ms and 12.8 MB.
