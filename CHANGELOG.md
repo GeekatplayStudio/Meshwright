@@ -32,6 +32,26 @@ All notable changes to Meshwright. Format based on [Keep a Changelog](https://ke
   the layer that used to bob now only leans.
 
 ### Fixed
+- **An FBX with its texture baked inside loaded as a grey model, or crashed the program.** Three
+  faults in a row on the same file, a 228 MB Hi3D export carrying an 8192×8192 JPEG:
+
+  The FBX parser only ever read geometry and UVs, so the material — and the artwork inside it — was
+  never looked at. Nothing downstream could recover it either: trimesh cannot open FBX at all, and
+  the companion-file scan looks for images *beside* the model, which a file that embeds its own has
+  none of. Textures are now read from the material, through the normalised view that covers Phong,
+  Lambert, Arnold, Maya and Blender-style materials alike, embedded or referenced by name.
+
+  Decoding them then took the whole program down without a message. Allocating a large image while
+  the FBX scene is still open corrupts its teardown, and the process dies the moment it is released.
+  The bytes are now copied out and the scene closed before anything is decoded — which also cut peak
+  memory on that model from 2.4 GB to 0.95 GB.
+
+  Finally, a model in more than one piece never showed its texture. The piece-colour overlay paints
+  straight onto the mesh, and the viewport will not fight it — so with 49 pieces the map was loaded,
+  the UVs were there, the button said PBR, and the model still drew flat grey. A textured model now
+  opens showing its texture, and choosing any shading mode takes the overlay down instead of lighting
+  the button up and changing nothing. **Highlight** puts the piece colours back.
+
 - **A reduced model showed a wrong colour on a handful of triangles near its seams.** Carrying UVs
   through an edit rebuilds some corners from a neighbouring triangle, which extends that triangle's
   plane and can land a hair past the edge of the texture sheet — measured 0.0077 outside on 108 of

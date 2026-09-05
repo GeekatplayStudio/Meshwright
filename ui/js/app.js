@@ -104,6 +104,9 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.rot').forEach(b => b.disabled = false);
         updateTarget();
 
+        // A textured model opens showing its texture, not the piece colours.
+        if (res.textures && res.textures.has_textures) dropShellHighlight();
+
         if (res.textures && window.meshwrightTexture) {
             // Cheap: a summary, not the pixels. The texture panel re-fetches the maps
             // itself only when their version has actually moved.
@@ -317,6 +320,23 @@ document.addEventListener('DOMContentLoaded', () => {
     /* ---------- shells ---------- */
     let shellSelection = new Set();
     let shellHighlight = true;
+
+    /* Piece colours and a shading mode cannot both be on the mesh — the shell overlay
+       paints vertex colours straight onto it, and viewer.setMode() will not fight that,
+       so it quietly does nothing while the overlay is up.
+
+       That is fine while somebody is picking pieces to delete, and wrong the rest of
+       the time. A model in 49 pieces with an 8192px texture opened flat grey: the map
+       was loaded, the UVs were there, the button said PBR, and the overlay was on top
+       of all of it. So anything that asks for a shading mode takes the overlay down
+       first, and the Highlight button puts it back whenever it is wanted. */
+    function dropShellHighlight() {
+        if (!shellHighlight) return;
+        shellHighlight = false;
+        const btn = $('btnShellsHighlight');
+        if (btn) btn.classList.remove('active');
+        if (window.viewer) window.viewer.hideShells();
+    }
     function renderShells(shells) {
         const card = $('cardShells');
         shellSelection = new Set();
@@ -1072,6 +1092,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.viewport-tools button[data-mode]').forEach(b => b.addEventListener('click', () => {
         document.querySelectorAll('.viewport-tools button[data-mode]').forEach(x => x.classList.remove('active'));
         b.classList.add('active');
+        dropShellHighlight();          // or the mode would light up and change nothing
         window.viewer.setMode(b.dataset.mode);
     }));
     $('btnWire').addEventListener('click', e => {

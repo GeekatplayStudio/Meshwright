@@ -5,6 +5,7 @@ Author: Vladimir Chopine
 Automatically discovers and maps companion PBR texture files (Meshy AI,
 Tripo, Sketchfab, Blender, etc.) located alongside 3D models or embedded within them.
 """
+import io
 import os
 import re
 
@@ -106,6 +107,147 @@ def find_companion_texture_files(model_path: str) -> dict[str, str]:
                 break
 
     return found
+
+
+# Where a texture is bound on the material, and which of our channels that is.
+#
+# ufbx normalises every shading model it knows — Phong, Lambert, Arnold, Maya's
+# standard surface, Blender's Principled — onto one `pbr` set, so reading named slots
+# is both shorter and far more reliable than matching FBX property-name strings, which
+# differ per exporter. The `fbx` set is consulted afterwards for older materials whose
+# properties do not reach the pbr view.
+FBX_PBR_SLOTS = (
+    ("base_color", "albedo"),
+    ("normal_map", "normal"),
+    ("roughness", "roughness"),
+    ("metalness", "metallic"),
+    ("ambient_occlusion", "ao"),
+    ("displacement_map", "height"),
+)
+FBX_LEGACY_SLOTS = (
+    ("diffuse_color", "albedo"),
+    ("normal_map", "normal"),
+    ("bump", "normal"),
+    ("displacement", "height"),
+)
+
+# Albedo and normal carry three meaningful channels; the rest are single-channel data
+# and are flattened so a greyscale map does not travel as three copies of itself.
+_COLOUR_CHANNELS = {"albedo", "normal", "metallic_roughness", "orm"}
+
+
+def _texture_source(texture, model_dir: str):
+    """
+    Where one FBX texture slot's picture can be read from, without reading it yet.
+
+    Returns the raw bytes the file embeds, or a path on disk, or None. Deliberately
+    does no decoding — see fbx_texture_blobs for why that has to wait.
+
+    An FBX may carry the image inside itself or only name a file, and both are worth
+    trying: the embedded bytes first because they are certainly the right ones, then
+    the names it gives, resolved against the folder the model was opened from. An
+    exporter writes the path from the machine it ran on, so only the basename can be
+    trusted to still mean anything here.
+    """
+    if texture is None:
+        return None
+
+    for holder in (texture, getattr(texture, "video", None)):
+        blob = getattr(holder, "content", None)
+        if blob:
+            return bytes(blob)
+
+    # A layered texture wraps the real file textures rather than holding bytes itself.
+    for nested in getattr(texture, "file_textures", None) or ():
+        if nested is not texture:
+            found = _texture_source(nested, model_dir)
+            if found is not None:
+                return found
+
+    for attr in ("absolute_filename", "filename", "relative_filename"):
+        name = getattr(texture, attr, None)
+        if not name:
+            continue
+        bare = os.path.basename(str(name).replace("\\", "/"))
+        for candidate in (str(name), os.path.join(model_dir, bare)):
+            if candidate and os.path.isfile(candidate):
+                return candidate
+    return None
+
+
+def fbx_texture_blobs(scene, model_path: str) -> dict[str, object]:
+    """
+    Where each channel's artwork lives, as raw bytes or a path — nothing decoded.
+
+    Decoding has to happen after the ufbx scene has been released, which is why this
+    stops at the bytes. Allocating a large image while the scene is still alive
+    corrupts its teardown and takes the process down with an access violation when it
+    is freed: an 8192x8192 JPEG out of a 228 MB FBX does it every time. Copying the
+    bytes out costs a few megabytes, and decoding afterwards is reliable.
+
+    The first material to supply a channel wins. A multi-material FBX can name a
+    different image per part, and Meshwright carries one set of maps for the whole
+    model, so the rest are reported rather than silently blended.
+    """
+    found: dict[str, object] = {}
+    model_dir = os.path.dirname(os.path.abspath(model_path))
+    # One texture is normally reachable through both the pbr and the legacy view of
+    # the same material, so identity — not the fact that a channel is already filled —
+    # is what says a binding really went unused.
+    taken: dict[str, object] = {}
+    passed_over = set()
+
+    for material in getattr(scene, "materials", None) or ():
+        for group, slots in (("pbr", FBX_PBR_SLOTS), ("fbx", FBX_LEGACY_SLOTS)):
+            bag = getattr(material, group, None)
+            if bag is None:
+                continue
+            for slot, channel in slots:
+                texture = getattr(getattr(bag, slot, None), "texture", None)
+                if texture is None:
+                    continue
+                ident = getattr(texture, "element_id", id(texture))
+                if channel in found:
+                    if taken.get(channel) != ident:
+                        passed_over.add((channel, ident))
+                    continue
+                source = _texture_source(texture, model_dir)
+                if source is None:
+                    continue
+                found[channel] = source
+                taken[channel] = ident
+
+    if passed_over:
+        found["__unused__"] = len(passed_over)
+    return found
+
+
+def decode_fbx_textures(blobs: dict, log=None) -> dict[str, Image.Image]:
+    """
+    Turn what fbx_texture_blobs found into images. Call once the scene is gone.
+    """
+    log = log or (lambda *a, **k: None)
+    unused = blobs.pop("__unused__", 0) if isinstance(blobs, dict) else 0
+    maps: dict[str, Image.Image] = {}
+
+    for channel, source in (blobs or {}).items():
+        try:
+            img = Image.open(io.BytesIO(source) if isinstance(source, bytes) else source)
+            img.load()
+        except Exception as exc:
+            log(f"Could not read the {channel} texture this FBX declares: {exc}", "warn")
+            continue
+        if _is_placeholder(img):
+            continue
+        maps[channel] = img.convert("RGB" if channel in _COLOUR_CHANNELS else "L")
+
+    if maps:
+        detail = ", ".join(f"{c} {maps[c].size[0]}x{maps[c].size[1]}" for c in sorted(maps))
+        log(f"FBX material supplied {len(maps)} texture map(s): {detail}", "ok")
+    if unused:
+        log(f"{unused} other texture(s) in this FBX were not used — Meshwright carries "
+            f"one set of maps for the whole model", "info")
+    return maps
 
 
 def _is_placeholder(img) -> bool:

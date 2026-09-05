@@ -12,7 +12,7 @@ by [Geekatplay Studio](https://www.geekatplay.com) · Vladimir Chopine
 [![License](https://img.shields.io/badge/license-MIT-d9a441.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-3776ab.svg)](https://python.org)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-6ea8fe.svg)](#install)
-[![Tests](https://img.shields.io/badge/tests-294%20passing-4cc38a.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-314%20passing-4cc38a.svg)](tests/)
 [![MCP](https://img.shields.io/badge/MCP-ready-b06bd0.svg)](docs/MCP.md)
 
 [**☕ Support development**](https://geekatplay.gumroad.com/coffee) · [Quick start](#quick-start) · [Features](#what-it-does) · [Docs](docs/) · [MCP server](docs/MCP.md) · [Troubleshooting](#troubleshooting)
@@ -115,7 +115,7 @@ A stage is only recorded as a fix if the diagnostics actually changed. The pipel
 
 Meshwright keeps whatever textures came with your model, and keeps them lined up through everything you do to it.
 
-**It finds them.** Textures baked into the file (GLB, glTF, FBX) are read from the model's own material. Textures the file only points at — an OBJ with its `.mtl`, or a folder of PNGs beside the model — are found by name, including the layouts Meshy, Tripo, Sketchfab and Blender export: `model.png`, `*_baseColor`, `*_Normal_OpenGL`, `*_Roughness`, `*_AO`, and packed `*_ORM` / `*_metallicRoughness` maps, which are unpacked into their separate channels. Some generators embed a 2×2 placeholder in the FBX and ship the real 2048px maps as separate files; Meshwright ignores the placeholder and uses the artwork.
+**It finds them.** Textures baked into the file (GLB, glTF, FBX) are read from the model's own material — including FBX files that embed the image itself, where there is nothing beside the model to find. Textures the file only points at — an OBJ with its `.mtl`, or a folder of PNGs beside the model — are found by name, including the layouts Meshy, Tripo, Sketchfab and Blender export: `model.png`, `*_baseColor`, `*_Normal_OpenGL`, `*_Roughness`, `*_AO`, and packed `*_ORM` / `*_metallicRoughness` maps, which are unpacked into their separate channels. Some generators embed a 2×2 placeholder in the FBX and ship the real 2048px maps as separate files; Meshwright ignores the placeholder and uses the artwork.
 
 **They stay put.** Texture coordinates are held per face corner, beside the mesh rather than inside it, so the geometry stays a properly welded solid while they travel with it. Repairing or decimating a textured model does not turn it into a pile of pieces, and the readiness score reflects the real geometry. Measured drift after decimating to a fiftieth of the original face count: under half a texel on a 2048px map.
 
@@ -425,7 +425,7 @@ python -m venv .venv
 .venv\Scripts\python -m pip install -r requirements-dev.txt
 npm install       # vendors Three.js into ui/vendor and installs eslint
 
-npm test          # pytest, 294 tests
+npm test          # pytest, 314 tests
 npm run lint      # eslint + ruff
 npm run mcp       # start the MCP server
 ```

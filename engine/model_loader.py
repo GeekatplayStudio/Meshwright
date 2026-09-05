@@ -4,7 +4,11 @@ import numpy as np
 import trimesh
 
 from engine.indexing import duplicate_mask
-from engine.texture.companion_detector import extract_embedded_textures
+from engine.texture.companion_detector import (
+    decode_fbx_textures,
+    extract_embedded_textures,
+    fbx_texture_blobs,
+)
 from engine.texture.uv_channel import from_vertex_uv
 
 
@@ -75,6 +79,75 @@ def _fan_triangulate(u_mesh) -> np.ndarray:
     return corners
 
 
+def _load_fbx(file_path: str) -> tuple[trimesh.Trimesh | None, dict]:
+    """
+    Parse an FBX with ufbx, and get out of the scene's way.
+
+    Returns (mesh, texture sources). Everything ufbx owns stays inside this function:
+    the mesh is built from copies, and the textures come back as raw bytes or paths
+    rather than decoded images.
+
+    That last part is not tidiness. Allocating a large image while the ufbx scene is
+    still alive corrupts its teardown, and the process dies with an access violation
+    the moment the scene is freed — an 8192x8192 JPEG embedded in a 228 MB FBX does it
+    every time, deterministically, and with no Python traceback to show for it.
+    Copying the bytes out costs a few megabytes, and decoding once the scene has gone
+    is reliable. Keeping the scene a local of this function is what guarantees that
+    ordering, so it should not be hoisted back into load_model.
+    """
+    scene = ufbx.load_file(file_path)
+    mesh = None
+    all_verts, all_faces, all_uvs = [], [], []
+    v_offset = 0
+
+    for u_m in scene.meshes:
+        if u_m.num_faces == 0:
+            continue
+        pos_vals = np.frombuffer(u_m.vertex_position.values, dtype=np.float64).reshape(-1, 3)
+        has_uv = u_m.vertex_uv.exists and len(u_m.vertex_uv.values) > 0
+        v_idx = _as_array(u_m.vertex_position.indices, u_m.num_indices)
+        uv_idx = _as_array(u_m.vertex_uv.indices, u_m.num_indices) if has_uv else None
+
+        # FBX polygons are not necessarily triangles. Fan-triangulate them, which is
+        # what an exporter would have done, rather than reshaping blindly and raising
+        # on the first quad.
+        if u_m.num_indices == u_m.num_triangles * 3:
+            corners = None                      # already triangles
+        else:
+            corners = _fan_triangulate(u_m)
+
+        tri_v_idx = v_idx if corners is None else v_idx[corners]
+        tri_uv_idx = None
+        if has_uv:
+            tri_uv_idx = uv_idx if corners is None else uv_idx[corners]
+
+        if has_uv and tri_uv_idx is not None:
+            uv_vals = np.frombuffer(u_m.vertex_uv.values, dtype=np.float64).reshape(-1, 2)
+            keys = (tri_v_idx.astype(np.uint64) << 32) | tri_uv_idx.astype(np.uint64)
+            uniq_keys, inv = np.unique(keys, return_inverse=True)
+
+            sub_v_idx = (uniq_keys >> 32).astype(np.int64)
+            sub_uv_idx = (uniq_keys & 0xFFFFFFFF).astype(np.int64)
+
+            all_verts.append(pos_vals[sub_v_idx])
+            all_uvs.append(uv_vals[sub_uv_idx])
+            all_faces.append(inv.reshape(-1, 3) + v_offset)
+            v_offset += len(sub_v_idx)
+        else:
+            all_verts.append(pos_vals)
+            all_faces.append(tri_v_idx.reshape(-1, 3) + v_offset)
+            v_offset += len(pos_vals)
+
+    if all_verts:
+        # vstack copies, so nothing handed back still points into ufbx's memory.
+        mesh = trimesh.Trimesh(vertices=np.vstack(all_verts), faces=np.vstack(all_faces),
+                               process=False)
+        if all_uvs:
+            mesh.visual = trimesh.visual.TextureVisuals(uv=np.vstack(all_uvs))
+
+    return mesh, (fbx_texture_blobs(scene, file_path) if mesh is not None else {})
+
+
 def load_model(file_path: str, log=None, with_stats: bool = True) -> tuple[trimesh.Trimesh, dict]:
     """
     Loads any 3D model (OBJ, FBX, GLB, GLTF, STL, PLY, 3DS, DAE, 3MF, OFF, etc.)
@@ -89,69 +162,28 @@ def load_model(file_path: str, log=None, with_stats: bool = True) -> tuple[trime
 
     ext = os.path.splitext(file_path)[1].lower()
     mesh = None
-    log = log or (lambda m: None)
+    fbx_maps = {}                       # what the FBX declares on its own materials
+    fbx_blobs = {}                      # ...before it has been decoded, see _load_fbx
+    # Every log call in here passes a level, so the stand-in has to accept one too —
+    # otherwise load_model() without a logger dies on the first message it writes.
+    log = log or (lambda *a, **k: None)
     log(f"Reading {os.path.basename(file_path)} ({os.path.getsize(file_path) / 1e6:.1f} MB)")
 
     # Strategy 1: For FBX files, use fast native ufbx parser with full UV support
     if ext == ".fbx" and HAS_UFBX:
         try:
             log("Parsing FBX with ufbx (fast native)")
-            scene = ufbx.load_file(file_path)
-            all_verts, all_faces, all_uvs = [], [], []
-            v_offset = 0
-
-            for u_m in scene.meshes:
-                if u_m.num_faces == 0:
-                    continue
-                pos_vals = np.frombuffer(u_m.vertex_position.values, dtype=np.float64).reshape(-1, 3)
-                has_uv = u_m.vertex_uv.exists and len(u_m.vertex_uv.values) > 0
-                v_idx = _as_array(u_m.vertex_position.indices, u_m.num_indices)
-                uv_idx = _as_array(u_m.vertex_uv.indices, u_m.num_indices) if has_uv else None
-
-                # FBX polygons are not necessarily triangles. Fan-triangulate them,
-                # which is what an exporter would have done, rather than reshaping
-                # blindly and raising on the first quad.
-                if u_m.num_indices == u_m.num_triangles * 3:
-                    corners = None                      # already triangles
-                else:
-                    corners = _fan_triangulate(u_m)
-
-                tri_v_idx = v_idx if corners is None else v_idx[corners]
-                tri_uv_idx = None
-                if has_uv:
-                    tri_uv_idx = uv_idx if corners is None else uv_idx[corners]
-
-                if has_uv and tri_uv_idx is not None:
-                    uv_vals = np.frombuffer(u_m.vertex_uv.values, dtype=np.float64).reshape(-1, 2)
-                    keys = (tri_v_idx.astype(np.uint64) << 32) | tri_uv_idx.astype(np.uint64)
-                    uniq_keys, inv = np.unique(keys, return_inverse=True)
-
-                    sub_v_idx = (uniq_keys >> 32).astype(np.int64)
-                    sub_uv_idx = (uniq_keys & 0xFFFFFFFF).astype(np.int64)
-
-                    sub_verts = pos_vals[sub_v_idx]
-                    sub_uvs = uv_vals[sub_uv_idx]
-                    sub_faces = inv.reshape(-1, 3) + v_offset
-
-                    all_verts.append(sub_verts)
-                    all_uvs.append(sub_uvs)
-                    all_faces.append(sub_faces)
-                    v_offset += len(sub_verts)
-                else:
-                    sub_faces = tri_v_idx.reshape(-1, 3) + v_offset
-                    all_verts.append(pos_vals)
-                    all_faces.append(sub_faces)
-                    v_offset += len(pos_vals)
-
-            if all_verts:
-                combined_v = np.vstack(all_verts)
-                combined_f = np.vstack(all_faces)
-                mesh = trimesh.Trimesh(vertices=combined_v, faces=combined_f, process=False)
-                if all_uvs:
-                    mesh.visual = trimesh.visual.TextureVisuals(uv=np.vstack(all_uvs))
+            mesh, fbx_blobs = _load_fbx(file_path)
         except Exception as e:
             log(f"ufbx parser error: {e}", "warn")
-            mesh = None
+            mesh, fbx_blobs = None, {}
+
+        # The scene is out of scope now, and only here is it safe to turn what it
+        # declared into images (see _load_fbx). Nothing else in the pipeline would
+        # ever see them: trimesh cannot open FBX at all, and a file that embeds its
+        # artwork has no companion images beside it for the folder scan to find.
+        if fbx_blobs:
+            fbx_maps = decode_fbx_textures(fbx_blobs, log)
 
     # Strategy 2: Standard Trimesh loader (handles STL, OBJ, GLB, GLTF, PLY, 3MF, DAE, OFF, etc.)
     if mesh is None:
@@ -195,6 +227,12 @@ def load_model(file_path: str, log=None, with_stats: bool = True) -> tuple[trime
     # the texture engine. What stays behind is pure geometry.
     corner_uv = from_vertex_uv(mesh.faces, getattr(getattr(mesh, "visual", None), "uv", None))
     embedded = extract_embedded_textures(mesh)
+    # What the FBX itself declares outranks anything read off the trimesh visual. The
+    # visual built for an FBX is a bare TextureVisuals carrying UVs, whose default
+    # material reports a 2x2 stub as its image — and a stub that arrives first would
+    # otherwise keep the real map out, then be discarded as a placeholder further
+    # down, leaving a fully textured model looking as though it had none.
+    embedded.update(fbx_maps)
     mesh.visual = trimesh.visual.ColorVisuals()
 
     if corner_uv is not None:

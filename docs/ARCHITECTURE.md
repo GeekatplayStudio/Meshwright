@@ -338,6 +338,47 @@ UVs come across through a nearest-vertex lookup rather than an exact replay:
 9.6 seconds against 0.7 for a KD-tree query, on a decimation that itself took 4. For a
 mesh that exists to be looked at, that trade is the right way round.
 
+## Working around ufbx
+
+FBX is parsed with ufbx rather than trimesh, which cannot open the format at all. That
+has a consequence worth stating plainly: **if the ufbx pass does not lift a texture off
+the scene, nothing downstream ever will.** The companion-file scan looks for images
+*beside* the model, and a file that embeds its artwork leaves none there. A 228 MB Hi3D
+export with an 8192×8192 JPEG inside it opened as an untextured grey model for exactly
+that reason — the parser only ever read geometry and UVs.
+
+`_load_fbx` now reads the material as well, through ufbx's `pbr` view. ufbx normalises
+Phong, Lambert, Arnold, Maya's standard surface and Blender's Principled onto one set
+of named slots, so reading `pbr.base_color` and friends is both shorter and far more
+reliable than matching FBX property-name strings, which differ per exporter. The `fbx`
+view is consulted afterwards for older materials that do not reach the pbr one.
+
+### The scene has to die before anything large is allocated
+
+This is the part that will look arbitrary and must not be tidied away. **Allocating a
+large image while the ufbx scene is still referenced corrupts its teardown**, and the
+process dies with an access violation the moment the scene is freed — deterministically,
+with no Python traceback, in a place unrelated to the cause. Reduced to its smallest
+form: decode the embedded 8192² JPEG, return from the function, crash. Copy the bytes
+out, release the scene, *then* decode, and it is fine.
+
+So the work is split. `fbx_texture_blobs` walks the materials and returns raw bytes or
+file paths — never an image. `_load_fbx` keeps the scene as its own local and hands back
+a mesh built from copies, so everything ufbx owns is gone by the time it returns. Only
+then does `load_model` call `decode_fbx_textures`. Keeping the scene a local of that one
+function is what enforces the ordering; hoisting it back into `load_model` brings the
+crash back. `tests/test_fbx_textures.py` asserts the split from both ends.
+
+Releasing the scene earlier also cut peak memory on that model from 2.4 GB to 0.95 GB.
+
+### A stub must not outrank the artwork
+
+The visual built for an FBX is a bare `TextureVisuals` carrying UVs, and its default
+material reports a 2×2 image. `extract_embedded_textures` finds that first, so the merge
+in `load_model` is `embedded.update(fbx_maps)` and not `setdefault`: a stub arriving
+first would keep the real map out, then be discarded further down as a placeholder,
+leaving a fully textured model looking as though it had none.
+
 ## Working around QuadriFlow
 
 Like xatlas, QuadriFlow is native code that can abort rather than fail — an Eigen
