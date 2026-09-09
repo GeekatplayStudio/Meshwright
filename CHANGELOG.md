@@ -41,6 +41,30 @@ All notable changes to Meshwright. Format based on [Keep a Changelog](https://ke
   the layer that used to bob now only leans.
 
 ### Fixed
+- **Textures scrambled across half the model, and a load that could run out of memory.**
+  Both showed up on the same AI-generated GLB — 694,078 faces in 366 loose shells, with a UV atlas
+  made of 13,314 islands — and they were unrelated.
+
+  Separating a model into shells renumbers its faces, and the UV channel is meant to be permuted to
+  match. It never was: the check for "the faces did not move" was tested first, and it only compares
+  *how many* faces there are, which separation does not change. So the permutation branch below it
+  was unreachable and every shell was painted with some other shell's artwork. 50.8% of faces on the
+  reported model, which is why half of it looked shattered. Single-shell models were unaffected,
+  which is why it went unnoticed.
+
+  The viewport's simplified copy had its own version of the same fault. Texture coordinates rode
+  through the decimation as one UV per welded vertex, chosen arbitrarily from the corners meeting
+  there — but a vertex on a UV seam has several, and on an island-heavy atlas that is 45% of them.
+  The display copy now carries UVs per face corner, transferred after decimation and split at seams
+  exactly as the full-detail path already did. Wrong faces went from 90.8% to 1.8%, and it costs
+  about half a second: the transfer picks each face's island by true surface distance over a short
+  candidate list, rather than by nearest triangle centroid.
+
+  Separately, the loader parks the model's images on `mesh.metadata` for the texture engine to pick
+  up, and left them there. `mesh.copy()` and `mesh.submesh()` deep-copy that dictionary, so a model
+  with 4096px maps cloned them once per shell and died with a `MemoryError` before drawing anything.
+  Ownership now transfers properly and the images are dropped from the metadata once bound.
+
 - **Loading progress bar disappeared before the 3D model was visible on screen.** Python previously
   emitted `state: 'done'` before returning the model data across the desktop IPC bridge. The frontend
   dismissed the toast and progress bar immediately, leaving several seconds of heavy base64 decoding

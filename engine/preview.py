@@ -11,10 +11,9 @@ import base64
 
 import numpy as np
 import trimesh
-from scipy.spatial import cKDTree
 from trimesh.grouping import group_rows
 
-from engine.texture.uv_channel import split_for_gpu, uv_of
+from engine.texture.uv_channel import split_for_gpu, transfer_fast, uv_of
 
 try:
     import fast_simplification as fs
@@ -37,7 +36,11 @@ def _b64(array, dtype) -> str:
 
 def _decimate_block(vertices, faces, uvs, keep):
     """
-    One connected block of welded geometry at reduced detail, carrying UVs across.
+    One connected block of welded geometry at reduced detail.
+
+    `uvs` is accepted and returned untouched: texture coordinates are carried across
+    per face corner once the whole display copy exists, not per vertex here, because
+    a welded vertex on a UV seam has no single correct value (see build_mesh_preview).
     """
     reduction = float(np.clip(1.0 - keep, 0.0, 0.99))
     verts32 = np.ascontiguousarray(vertices, dtype=np.float32)
@@ -47,11 +50,7 @@ def _decimate_block(vertices, faces, uvs, keep):
     new_v = np.asarray(new_v, dtype=np.float32)
     new_f = np.asarray(new_f, dtype=np.int64)
 
-    new_uv = None
-    if uvs is not None and len(new_v):
-        _, nearest = cKDTree(verts32).query(new_v, workers=-1)
-        new_uv = np.ascontiguousarray(uvs[nearest], dtype=np.float32)
-    return new_v, new_f, new_uv
+    return new_v, new_f, uvs
 
 
 def _reduce_for_display(vertices, faces, uvs, shell_face_counts, keep):
@@ -124,16 +123,25 @@ def build_mesh_preview(mesh: trimesh.Trimesh, corner_uv=None, max_faces: int | N
         raw_v = np.asarray(mesh.vertices, dtype=np.float32)
         raw_f = np.asarray(mesh.faces, dtype=np.int64)
 
-        vert_uv = None
-        if uv is not None and len(mesh.vertices) > 0:
-            flat_v = mesh.faces.reshape(-1)
-            flat_uv = uv.reshape(-1, 2)
-            vert_uv = np.zeros((len(mesh.vertices), 2), dtype=np.float32)
-            _, first_idx = np.unique(flat_v, return_index=True)
-            vert_uv[flat_v[first_idx]] = flat_uv[first_idx]
+        vertices, faces, _, shell_face_counts = _reduce_for_display(
+            raw_v, raw_f, None, shell_face_counts, keep)
 
-        vertices, faces, split_uv, shell_face_counts = _reduce_for_display(
-            raw_v, raw_f, vert_uv, shell_face_counts, keep)
+        # UVs are carried across afterwards, per face corner, then split exactly as
+        # the full-detail path does.
+        #
+        # They used to ride along through the decimation as one UV per welded vertex,
+        # picked arbitrarily from the corners meeting there. Any vertex on a UV seam
+        # has several, and on a model whose atlas is a mosaic of islands that is most
+        # of them — 45% of the vertices of the model this was found on. The display
+        # copy came out with the texture shattered across half the surface.
+        split_uv = None
+        if uv is not None:
+            display = trimesh.Trimesh(vertices=np.asarray(vertices, dtype=np.float64),
+                                      faces=np.asarray(faces, dtype=np.int64), process=False)
+            carried = transfer_fast(mesh, uv, display)
+            if carried is not None:
+                vertices, faces, split_uv, _ = split_for_gpu(display, carried)
+
         # The overlay would describe a mesh that is no longer the one on screen.
         boundary = np.zeros((0, 2), np.int64)
     else:

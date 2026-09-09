@@ -165,6 +165,13 @@ class TextureServiceMixin:
         """
         Pick up whatever textures came with the file and make sure they have UVs to
         sit on. Returns (mesh, corner_uv) — the geometry is never modified here.
+
+        Ownership of the images transfers here: the loader parks them on
+        `mesh.metadata`, this takes them into the material manager, and then drops
+        them from the metadata. That last step is not tidiness. `mesh.copy()` and
+        `mesh.submesh()` deep-copy the metadata dict, so a model with 4096px maps
+        that separates into a few shells would clone them once per shell and run the
+        process out of memory before the first frame is drawn.
         """
         try:
             from engine.texture.companion_detector import (
@@ -188,4 +195,8 @@ class TextureServiceMixin:
                              "it is too dense to unwrap automatically. Use Unwrap UVs if you want one.", "warn")
         except Exception as e:
             self.log(f"Texture detection: {e}", "warn")
+        finally:
+            metadata = getattr(mesh, "metadata", None)
+            if isinstance(metadata, dict):
+                metadata.pop("embedded_textures", None)
         return mesh, corner_uv

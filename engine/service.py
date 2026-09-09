@@ -201,10 +201,17 @@ class MeshService(TextureServiceMixin):
         if source_uv is None or source_mesh is None:
             return None
 
-        if matches_source and len(source_uv) == len(final_mesh.faces):
-            return source_uv
-        if matches_source and face_order is not None and len(source_uv) == len(face_order):
-            return np.ascontiguousarray(source_uv[face_order])
+        if matches_source:
+            # The permutation is tested first on purpose. Separating shells reorders
+            # the faces but does not change how many there are, so the "nothing moved"
+            # test below is still true at that point — and taking it would hand back a
+            # UV channel in the old face order, mapping every shell to some other
+            # shell's artwork. A 366-piece model came out with half its surface
+            # painted from the wrong part of the atlas.
+            if face_order is not None and len(source_uv) == len(face_order):
+                return np.ascontiguousarray(source_uv[face_order])
+            if len(source_uv) == len(final_mesh.faces):
+                return source_uv
 
         with self._job("uv_transfer", "Carrying texture coordinates across",
                        faces=len(final_mesh.faces)):

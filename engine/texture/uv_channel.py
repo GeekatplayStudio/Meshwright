@@ -37,6 +37,11 @@ except ImportError:                    # pragma: no cover - exercised by the fal
 # point comfortably on any mesh with sane triangle sizes.
 FALLBACK_CANDIDATES = 24
 
+# The same idea for the viewport's quick transfer, where the shortlist only has to be
+# long enough to contain the triangle a decimated face actually sits on. Four is
+# where the accuracy stops improving on the models this was measured against.
+FAST_CANDIDATES = 4
+
 
 # ------------------------------------------------------------------ construction
 def from_vertex_uv(faces, vertex_uv) -> np.ndarray | None:
@@ -243,6 +248,71 @@ def transfer(source: trimesh.Trimesh, source_uv, target: trimesh.Trimesh) -> np.
     np.clip(direct_uv, flat.min(axis=0), flat.max(axis=0), out=direct_uv)
 
     return np.ascontiguousarray(direct_uv.reshape(n_faces, 3, 2), dtype=np.float32)
+
+
+def transfer_fast(source: trimesh.Trimesh, source_uv, target: trimesh.Trimesh) -> np.ndarray | None:
+    """
+    `transfer` for the viewport: same chart-aware answer, a cheaper way of finding
+    which source triangle to read.
+
+    The exact version projects every corner onto the source surface, which costs half
+    a minute on a 200,000-face display copy — too long to wait before the first frame.
+    This one shortlists by nearest face centroid instead. The chart check is what
+    actually matters for the picture: a corner is read from its own nearest triangle
+    only when that triangle belongs to the same UV island as the face it is part of,
+    and otherwise from the face's anchor. Without that test a decimated corner reads
+    whichever island happens to be nearest in space, and the model comes out papered
+    in fragments from all over the atlas.
+
+    Use `transfer` for anything the user keeps; this is for what they look at.
+    """
+    src_uv = uv_of(source, source_uv)
+    if src_uv is None or len(target.faces) == 0 or len(source.faces) == 0:
+        return None
+    if _same_topology(source, target):
+        return src_uv.copy()
+
+    src_tris = np.asarray(source.triangles)
+    labels = chart_labels(source, src_uv)
+    tree = cKDTree(src_tris.mean(axis=1))
+
+    tris = np.asarray(target.vertices, dtype=np.float64)[np.asarray(target.faces)]
+    corners = tris.reshape(-1, 3)
+
+    def nearest_face(points, shortlist=FAST_CANDIDATES):
+        """Closest source face by true point-triangle distance, over a centroid shortlist."""
+        _, candidates = tree.query(points, k=min(shortlist, len(src_tris)), workers=-1)
+        candidates = np.atleast_2d(candidates.reshape(len(points), -1))
+        best_d = np.full(len(points), np.inf)
+        best_f = np.zeros(len(points), dtype=np.int64)
+        for column in range(candidates.shape[1]):
+            fid = candidates[:, column]
+            d = np.linalg.norm(trimesh.triangles.closest_point(src_tris[fid], points) - points, axis=1)
+            closer = d < best_d
+            best_d[closer] = d[closer]
+            best_f[closer] = fid[closer]
+        return best_f
+
+    # Which island a face belongs to is the one decision worth paying for: getting it
+    # wrong paints the whole face from somewhere else in the atlas. Measured on the
+    # model this was found on, taking the anchor by true distance rather than by
+    # nearest centroid moved the display copy from 6.7% of faces visibly off to 1.8%,
+    # for half a second. Doing the same for each corner costs another second and
+    # changes nothing, so the corners keep the cheap query.
+    anchor = nearest_face(tris.mean(axis=1))                   # island per target face
+    _, nearest = tree.query(corners, workers=-1)               # best triangle per corner
+    anchor_per_corner = np.repeat(anchor, 3)
+    source_face = np.where(labels[nearest] == labels[anchor_per_corner], nearest, anchor_per_corner)
+
+    bary = _barycentric(src_tris[source_face], corners)
+    uv = np.einsum('nk,nkj->nj', bary, src_uv[source_face])
+
+    # As in `transfer`: reading off a neighbouring triangle extends its plane, so hold
+    # the result inside the range the source itself used rather than letting a corner
+    # wrap around to the far side of the atlas.
+    flat = src_uv.reshape(-1, 2)
+    np.clip(uv, flat.min(axis=0), flat.max(axis=0), out=uv)
+    return np.ascontiguousarray(uv.reshape(len(target.faces), 3, 2), dtype=np.float32)
 
 
 # ------------------------------------------------------------------ splitting out
