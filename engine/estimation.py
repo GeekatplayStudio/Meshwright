@@ -18,6 +18,9 @@ def estimate_seconds(operation: str, faces: int) -> float:
         "simplify": 6 * f + 0.3,
         "retopo": 45 * f + 3,
         "unwrap": 12 * f + 1.5,
+        # Slicing cost follows the model's height and the printer's resolution far
+        # more than its triangle count, so this is a flat guess rather than a curve.
+        "printability": 2 * f + 2.5,
         "pbr_gen": 3.0,
         "bake_glb": 6 * f + 2.0,
     }.get(operation, 5 * f + 0.5)

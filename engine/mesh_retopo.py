@@ -18,7 +18,6 @@ Three strategies, all targeting an absolute face count:
 """
 import os
 import subprocess
-import sys
 import tempfile
 
 import numpy as np
@@ -49,6 +48,7 @@ except ImportError:
     HAS_FAST_SIMPLIFY = False
 
 from engine.indexing import unique_rows
+from engine.runtime import subprocess_flags, worker_argv
 
 _QUADRIFLOW_WORKER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "_quadriflow_worker.py")
 
@@ -79,8 +79,9 @@ def _run_quadriflow(mesh: trimesh.Trimesh, quads: int, seed: int, sharp: bool, a
                  faces=np.asarray(mesh.faces, dtype=np.int64),
                  params=np.asarray([quads, seed, int(bool(sharp)), int(bool(adaptive))], dtype=np.int64))
         try:
-            proc = subprocess.run([sys.executable, _QUADRIFLOW_WORKER, in_path, out_path],
-                                  capture_output=True, timeout=QUADRIFLOW_TIMEOUT_S, check=False)
+            proc = subprocess.run(worker_argv("quadriflow", _QUADRIFLOW_WORKER, in_path, out_path),
+                                  capture_output=True, timeout=QUADRIFLOW_TIMEOUT_S, check=False,
+                                  **subprocess_flags())
         except subprocess.TimeoutExpired:
             log(f"Smart retopology did not converge on a {len(mesh.faces):,}-face piece within "
                 f"{QUADRIFLOW_TIMEOUT_S // 60} minutes — that happens, and waiting longer rarely "
@@ -109,6 +110,24 @@ def _run_quadriflow(mesh: trimesh.Trimesh, quads: int, seed: int, sharp: bool, a
             os.rmdir(work)
         except OSError:
             pass
+
+
+# The reduction methods that run only in MeshLab, and the label each has in the interface.
+NEEDS_MESHLAB = {"isotropic": "Uniform", "quadric": "Decimate"}
+
+
+def missing_engine_message(method: str) -> str | None:
+    """
+    Why `method` cannot run in this copy of Meshwright, or None when it can.
+
+    PyMeshLab is optional: the installer carries on if it will not install, and the
+    "lite" edition leaves it out on purpose. Without this a person who picked Decimate
+    was told only "Retopology made no change" — true, and no help at all.
+    """
+    if method in NEEDS_MESHLAB and not HAS_PYMESHLAB:
+        return (f"{NEEDS_MESHLAB[method]} ('{method}') needs MeshLab (PyMeshLab), which is not part of "
+                "this copy of Meshwright. Smart retopology (quadriflow) works without it — choose that instead.")
+    return None
 
 
 def _safe_log(log):

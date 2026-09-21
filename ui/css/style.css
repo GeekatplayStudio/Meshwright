@@ -576,3 +576,77 @@ body.working { cursor: progress; }
     .walker-bob, .walker-strip, .walker-balloon { animation: none; }
     .walker-strip { transform: translateX(0); }
 }
+
+/* ---------------------------------------------------------------- File browser
+   Meshwright's own Open dialog: places, a list, and a picture of the highlighted
+   file. Sized in vh/vw so it still fits on a laptop screen. */
+.browser-card { width: 1080px; max-width: 94vw; height: 82vh; max-height: 82vh; padding: 0; display: flex; flex-direction: column; overflow: hidden; }
+.browser-head { position: relative; padding: 14px 20px 10px; border-bottom: 1px solid var(--line); flex-shrink: 0; }
+.browser-head h2 { font-size: 15px; font-weight: 600; }
+.browser-head .hint { margin-top: 2px; }
+.browser-head-actions { position: absolute; top: 12px; right: 16px; display: flex; align-items: center; gap: 8px; }
+.browser-head-actions .about-close { position: static; }
+
+.browser-bar { display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-bottom: 1px solid var(--line); flex-shrink: 0; }
+.browser-bar .btn.small { height: 26px; padding: 0 9px; }
+.crumbs { flex: 1; display: flex; align-items: center; gap: 2px; overflow: hidden; white-space: nowrap; }
+.crumb { background: none; border: 0; color: var(--muted); font: inherit; cursor: pointer; padding: 3px 6px; border-radius: 5px; }
+.crumb:hover { background: var(--bg-3); color: var(--text); }
+.crumb-sep { color: var(--line); }
+.crumb-current { color: var(--text); font-weight: 600; padding: 3px 6px; overflow: hidden; text-overflow: ellipsis; }
+.browser-filter { width: 190px; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px; font: inherit; font-size: 12px; outline: none; }
+.browser-filter:focus { border-color: var(--accent); }
+
+.browser-body { flex: 1; display: grid; grid-template-columns: 178px 1fr 290px; min-height: 0; }
+.browser-places { border-right: 1px solid var(--line); overflow-y: auto; padding: 8px; background: var(--bg); }
+.place { display: flex; align-items: center; gap: 8px; width: 100%; background: none; border: 0; color: var(--muted); font: inherit; text-align: left; padding: 6px 8px; border-radius: 6px; cursor: pointer; }
+.place span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.place:hover { background: var(--bg-3); color: var(--text); }
+.place.active { background: var(--bg-3); color: var(--accent-2); }
+.place-head { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .5px; padding: 12px 8px 4px; }
+
+.browser-list { overflow-y: auto; padding: 6px; outline: none; }
+.browse-row { display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 10px; padding: 5px 8px; border-radius: 6px; cursor: pointer; }
+.browse-row:hover { background: var(--bg-3); }
+.browse-row.selected { background: #2a2f36; box-shadow: inset 0 0 0 1px var(--accent); }
+.row-thumb { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: var(--bg); border: 1px solid var(--line); border-radius: 5px; overflow: hidden; color: var(--muted); }
+.row-thumb img { width: 100%; height: 100%; object-fit: contain; }
+.row-icon { width: 20px; height: 20px; }
+.row-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row-meta { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.browse-empty { color: var(--muted); text-align: center; padding: 38px 16px; line-height: 1.7; }
+
+.browser-preview { border-left: 1px solid var(--line); padding: 14px; overflow-y: auto; background: var(--bg); }
+.preview-shot { width: 100%; aspect-ratio: 1; background: var(--bg-2); border: 1px solid var(--line); border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.preview-shot img { width: 100%; height: 100%; object-fit: contain; }
+.preview-shot.folder .row-icon, .preview-none .row-icon { width: 54px; height: 54px; color: var(--line); }
+.preview-name { margin-top: 10px; font-weight: 600; word-break: break-all; }
+.preview-facts { width: 100%; margin-top: 8px; border-collapse: collapse; }
+.preview-facts td { padding: 3px 0; vertical-align: top; font-size: 12px; }
+.preview-facts td:first-child { color: var(--muted); width: 96px; }
+.preview-facts td:last-child { font-variant-numeric: tabular-nums; }
+.preview-flag { color: var(--warn); font-size: 11px; margin-left: 6px; cursor: help; }
+.preview-note { margin-top: 10px; color: var(--muted); font-size: 12px; line-height: 1.5; border-left: 2px solid var(--line); padding-left: 8px; }
+.preview-spin { width: 26px; height: 26px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+
+.browser-foot { display: flex; align-items: center; gap: 14px; padding: 10px 16px; border-top: 1px solid var(--line); flex-shrink: 0; }
+.browser-spacer { flex: 1; }
+
+@media (prefers-reduced-motion: reduce) { .preview-spin { animation-duration: 4s; } }
+
+/* ------------------------------------------------------------- Printer check
+   The verdict, what it found, and — set apart — anything it could not confirm. */
+#cardPrinter select { width: 100%; }
+#printerSpec { margin: 8px 0; line-height: 1.5; }
+#printerTune { margin-bottom: 8px; }
+#printerTune input { background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; font: inherit; font-size: 12px; outline: none; width: 100%; }
+#printerTune input:focus { border-color: var(--accent); }
+#printResult { margin-top: 10px; }
+.print-verdict { font-weight: 600; padding: 7px 10px; border-radius: 6px; border-left: 3px solid var(--line); background: var(--bg); }
+.print-verdict.good { color: var(--good); border-left-color: var(--good); }
+.print-verdict.warn { color: var(--warn); border-left-color: var(--warn); }
+.print-verdict.bad  { color: var(--bad);  border-left-color: var(--bad); }
+.print-issues { margin-top: 8px; }
+.print-advice { margin-top: 8px; border-left: 2px solid var(--accent); padding-left: 8px; }
+.print-doubt { margin-top: 10px; padding: 8px 10px; border-radius: 6px; background: var(--bg); border-left: 3px solid var(--warn); color: var(--muted); font-size: 12px; line-height: 1.5; }
+.print-doubt strong { color: var(--warn); }

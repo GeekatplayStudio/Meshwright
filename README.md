@@ -12,7 +12,7 @@ by [Geekatplay Studio](https://www.geekatplay.com) · Vladimir Chopine
 [![License](https://img.shields.io/badge/license-MIT-d9a441.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-3776ab.svg)](https://python.org)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-6ea8fe.svg)](#install)
-[![Tests](https://img.shields.io/badge/tests-318%20passing-4cc38a.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-438%20passing-4cc38a.svg)](tests/)
 [![MCP](https://img.shields.io/badge/MCP-ready-b06bd0.svg)](docs/MCP.md)
 
 [**☕ Support development**](https://geekatplay.gumroad.com/coffee) · [Quick start](#quick-start) · [Features](#what-it-does) · [Docs](docs/) · [MCP server](docs/MCP.md) · [Troubleshooting](#troubleshooting)
@@ -43,6 +43,8 @@ Most "mesh repair" tools give you a spinner and a green tick. Meshwright tells y
 | Crash | Work lost | Background snapshots, **recovery offered on next start** |
 | Reduction | One decimation slider | **QuadriFlow smart retopology**, uniform remesh, or quadric collapse — with measured surface deviation |
 | Export | "Here is your STL" | Seven formats, and it **says when the file is not a solid** — the shell that slices with no infill |
+| Will it print? | You find out after six hours | **Checked against your actual printer** — 216 machines, resin and filament — before you slice |
+| Opening a file | A row of identical Windows icons | Meshwright's **own browser, with a picture of every model** and its triangle count |
 | Automation | GUI only | **MCP server** + Python API on the identical engine |
 
 ---
@@ -75,8 +77,9 @@ built in memory, nothing is downloaded and nothing is written to disk.
 It builds an isolated `.venv` next to the program, so nothing on your machine changes. Required
 packages all ship ready-made wheels — no compiler needed. The heavier mesh engines are installed
 **one at a time** and any that fail are skipped, so a single missing build can never abort the
-installation. Whatever is absent is simply not offered inside the program — run
-`.venv\Scripts\python scripts\check_install.py` to see exactly what your copy has.
+installation. Whatever is absent is reported, and a method that needs it says so when you choose it
+rather than failing quietly — run `.venv\Scripts\python scripts\check_install.py` to see exactly what
+your copy has.
 
 ---
 
@@ -124,6 +127,8 @@ Meshwright keeps whatever textures came with your model, and keeps them lined up
 <br><em>2,964,400 → 40,000 triangles, 98.7% fewer, maximum surface deviation 0.025 mm — with the PBR material still mapped correctly.</em>
 </div>
 
+**Check it against your printer.** Pick your machine in the panel — 216 of them, resin and filament, from Elegoo, Anycubic, Phrozen, Creality, Bambu Lab, Prusa and two dozen other makers — and Meshwright measures whether the detail in the model is something that machine can physically make. A resin printer is limited by its screen (an Elegoo Mars 4 Ultra is 153.4 mm across 8520 pixels, so one pixel is 18 µm); a filament printer is limited by its nozzle. The same model can be perfect on one and hopeless on the other. Anything too fine is listed and can be clicked to light up on the model, and where detail would be lost you are told the size at which none would be. It reports and points — it never changes the model, because what to do about it is your call. Nothing is claimed unless two independent measurements agree: what cannot be confirmed says so, because a printability check that quietly guesses is worse than none.
+
 **Unwrap, generate, paint, bake.** **Unwrap UVs** builds a layout without touching the geometry — a watertight model stays watertight and its score does not move. **Load Image / Generate PBR** derives normal, roughness, metallic, ambient-occlusion and height maps from any photo or texture. **Export Maps** writes every channel plus a transparent UV guide to open as a layer in Photoshop or GIMP; **Reload Maps** picks your edits back up; **Save Baked GLB** writes one self-contained file. Everything Meshwright writes has its seam gutters padded, so textures do not show dark fringes where the islands meet.
 
 <div align="center">
@@ -162,7 +167,23 @@ Multi-part models are split, colour-coded and listed with triangle counts and si
 <img src="docs/images/12-pieces.png" width="900" alt="Separate pieces colour-coded and selectable">
 </div>
 
-### 7 · Nothing is ever lost
+### 7 · Print check — will it actually print?
+
+Choose the printer this model is going to, and Meshwright measures whether the detail in it is something that machine can physically make. **216 machines** are built in — resin and filament, from Elegoo, Anycubic, Phrozen, Creality, Bambu Lab, Prusa and two dozen other makers — and if you have a slicer installed, its machines are offered too, marked *on this PC*. Nozzle, pixel pitch and layer height can all be typed over, because a nozzle is a consumable and you know what is fitted.
+
+The limit is a different number on the two kinds of machine. A resin printer is bounded by its screen — an Elegoo Mars 4 Ultra is 153.4 mm across 8520 pixels, so one pixel is 18 µm and about two of them is the finest thing it can cure. A filament printer is bounded by its nozzle, which cannot lay a line narrower than itself. **The same model can be perfect on one and hopeless on the other**, and now tells you which.
+
+Anything too fine is listed, counted and clickable — it lights up on the model, like any other diagnostic. Where detail would be lost you are told the size at which none would be: *"at 8× this size, about 7.9 mm tall, every detail would survive."* It **reports and points; it never changes the model** — printing it bigger, printing it on the other machine, thickening it or accepting the loss are all valid answers, and which one is right is yours to pick.
+
+**Nothing is claimed unless two independent measurements agree.** Every layer is sliced and drawn at the printer's own resolution, and morphological opening removes precisely what the machine cannot lay down; that measurement needs no normals and no watertight mesh, so it is the one that decides. Separately, a ray is fired into the surface at every face to measure the wall there — with Intel Embree behind it, 336,780 exact measurements in 0.4 s, returning 10.000 mm on a sphere of known thickness 10.000 mm. But it is only right while the surface faces the right way: on one real 694,000-face model with inconsistent winding it read a uniform 0.24 mm wall straight through a solid figure. So it never decides alone. On a mesh whose winding or watertightness is in doubt its findings are withheld and the panel says why, and where the two disagree, that disagreement is itself the finding. A printability check that quietly guesses is worse than none — it sends you to a six-hour print.
+
+### 8 · Open a file and see what it is
+
+Windows draws 3D thumbnails through Microsoft's 3D Viewer, which is no longer part of Windows 11 — so the standard Open dialog shows a row of identical blank icons and a filename to guess from. **Open model** therefore opens Meshwright's own browser instead: highlight a file and it draws the model, and reports the format, size, triangle count, dimensions, whether it carries textures, and roughly how long it will take to open. Pictures fill in beside the rows, so a folder can be read at a glance, and files you opened before are one click away under **Recent**.
+
+Nothing is loaded to make a picture — each file is sampled and lit, so a 249 MB five-million-face STL is drawn in about 0.7 s and a 67 MB GLB in about 0.2 s, against the 7.7 s that opening that GLB actually takes. The Windows dialog is still one click away, and drag-and-drop is unchanged.
+
+### 9 · Nothing is ever lost
 
 Every change creates a **numbered state**.
 
@@ -172,7 +193,7 @@ Every change creates a **numbered state**.
 - **Revert to original** is explicit, confirmed, and itself undoable.
 - **New** (<kbd>Ctrl</kbd>+<kbd>N</kbd>) or <kbd>Del</kbd> closes the model and empties the workspace, after a confirmation.
 
-### 8 · Always know what it is doing
+### 10 · Always know what it is doing
 
 Long operations announce themselves before they start — how many faces they are about to process and roughly how long it will take — then show a live timer and progress bar in the bottom-right corner, synchronized with a glowing top-of-viewport progress bar and center-screen loading animations. Loading progress stays active throughout file reading, geometry conversion, and WebGL GPU buffer preparation.
 
@@ -188,7 +209,7 @@ Everything also goes to the activity console with timestamps, and to stdout, so 
 <br><em>Every backend step, with timings.</em>
 </div>
 
-### 9 · Someone to wait with
+### 11 · Someone to wait with
 
 Opening a model and writing one out are the two waits worth watching, so that is when
 a small cup strolls along the bottom of the window — and he leaves when the work is
@@ -208,7 +229,7 @@ rubber-hose walk read as drawn rather than as a sprite on rails. He keeps walkin
 as long as the work takes, and if you start something else while he is on his way out
 he turns round from wherever he happens to be standing.
 
-### 10 · Export
+### 12 · Export
 
 STL, OBJ, PLY, OFF, GLB, glTF or 3MF with source-unit scaling (mm / cm / in) and build-plate alignment, plus a **JSON report** of the diagnostics and every operation applied — good for client sign-off or a print-farm audit trail.
 
@@ -286,6 +307,13 @@ Every input is validated, every call is guarded and undoable. See **[docs/MCP.md
 
 Textures come in embedded in the file or as companion images beside it, and go back out in OBJ,
 GLB and glTF, or as a folder of PNGs with a UV guide for Photoshop.
+
+Models arrive **the right way up**. Meshwright works in Z-up, as every slicer and build plate does,
+while glTF and GLB mandate Y-up in their specification and FBX declares its own axis in the file —
+so those are turned upright on the way in and turned back on the way out, which means a GLB written
+here is Y-up as the format requires and opening it again returns the same model. Formats that record
+nothing about orientation (OBJ, PLY, OFF, 3DS) are left exactly as they were saved, because guessing
+from the shape of a model would stand some up and lay others down with no way to tell those apart.
 
 Every export is unit-scaled, rested on the build plate, checked for solidity and named
 `<original>-GS-<timestamp>-fixed.<ext>`, so it never overwrites what you opened.
@@ -389,6 +417,13 @@ files you already have: **Open model**, <kbd>Ctrl</kbd>+<kbd>O</kbd>, or drag a 
 window. To try it immediately, click **Load demo model** in the empty viewport; that builds a small
 deliberately broken object in memory so you can watch the diagnostics and the repair work.
 
+**Open model** opens Meshwright's own browser rather than the Windows one, because Windows has no
+picture of a 3D file to show: it draws 3D thumbnails through Microsoft's 3D Viewer, which Windows 11
+no longer includes. Highlight a file and Meshwright draws the model and tells you its format, size,
+triangle count, dimensions, whether it carries textures and about how long it will take to open —
+without opening it, in a fraction of the time that would take. Files you opened before are under
+**Recent**, and **Windows dialog…** still gives you the standard box if you prefer it.
+
 The black terminal window that opens next to it is the activity log. Keep it open — closing it
 closes Meshwright.
 
@@ -425,7 +460,7 @@ python -m venv .venv
 .venv\Scripts\python -m pip install -r requirements-dev.txt
 npm install       # vendors Three.js into ui/vendor and installs eslint
 
-npm test          # pytest, 318 tests
+npm test          # pytest, 347 tests
 npm run lint      # eslint + ruff
 npm run mcp       # start the MCP server
 ```
@@ -433,6 +468,18 @@ npm run mcp       # start the MCP server
 Dependency versions in `requirements.txt` are deliberately bounded (`numpy>=1.26,<2.6` and so on) so
 an install can never drag a shared environment to an incompatible version. Anything that needs a
 compiler belongs in `requirements-optional.txt`, never in `requirements.txt`.
+
+### Building a Windows installer
+
+```powershell
+.venv\Scripts\python -m pip install -r requirements-build.txt
+powershell -ExecutionPolicy Bypass -File packaging\build.ps1
+```
+
+That freezes Meshwright into a program that runs with no Python installed, proves it works by running
+its own 18-step self-test, and wraps it in `Meshwright-Setup-<version>.exe`. See
+[packaging/README.md](packaging/README.md) for the two editions (with and without the GPL-licensed
+engines) and how to test an installer without putting anyone's data at risk.
 
 ---
 

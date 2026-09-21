@@ -5,6 +5,7 @@ import numpy as np
 import trimesh
 from trimesh.grouping import group_rows
 
+from engine import axes
 from engine.texture import uv_channel as UV
 
 # Formats that can actually carry texture coordinates. STL, OFF and 3MF cannot, so
@@ -131,10 +132,22 @@ def export_to_format(mesh: trimesh.Trimesh, output_path: str, export_format: str
     if export_format == "stl" and output_path.lower().endswith(".stl_ascii"):
         file_type = "stl_ascii"
 
+    # glTF and GLB mandate Y-up, and Meshwright works in Z-up, so the model is laid
+    # back down on the way out. Without this a GLB written here would open on its
+    # side in Blender, and opening it again in Meshwright — which stands Y-up files
+    # up — would turn it a further quarter turn every round trip.
+    laid_down = f".{export_format}" in axes.SPEC_Y_UP
+    if laid_down:
+        axes.to_y_up(export_mesh)
+
     out_dir = os.path.dirname(output_path)
     if out_dir and not os.path.isdir(out_dir):
         os.makedirs(out_dir, exist_ok=True)
     export_mesh.export(output_path, file_type=file_type)
+    if laid_down:
+        # Everything reported below is what the person sees on screen, not how the
+        # file happens to store it, so stand it back up before measuring.
+        axes.to_z_up(export_mesh)
 
     solidity = solidity_report(export_mesh)
     file_size_bytes = os.path.getsize(output_path)

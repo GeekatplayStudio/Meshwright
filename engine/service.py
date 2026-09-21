@@ -17,7 +17,7 @@ from engine.mesh_cleanup import fix_slivers
 from engine.mesh_exporter import EXPORT_FORMATS, export_to_format
 from engine.mesh_reducer import reduce_mesh
 from engine.mesh_repair import repair_mesh
-from engine.mesh_retopo import deviation, retopologize
+from engine.mesh_retopo import deviation, missing_engine_message, retopologize
 from engine.model_loader import load_model
 from engine.preview import DEFAULT_PREVIEW_FACES, build_mesh_preview
 from engine.session_store import SessionStore
@@ -427,6 +427,9 @@ class MeshService(TextureServiceMixin):
             current = st.analysis["stats"]["face_count"]
             target = int(V.number(target_faces, "target_faces", 20, max(20, current), 1000))
             meth = V.choice(method, "method", ("quadriflow", "isotropic", "quadric"), "quadriflow")
+            unavailable = missing_engine_message(meth)
+            if unavailable:
+                raise ServiceError(unavailable)
             verb = {"quadriflow": "Smart retopology", "quadric": "Decimating", "isotropic": "Uniform remeshing"}[meth]
             with self._job("retopo", f"{verb} to {target:,} faces"):
                 out, info = retopologize(st.mesh, target, method=meth, preserve_sharp=V.boolean(preserve_sharp, True),
@@ -649,6 +652,46 @@ class MeshService(TextureServiceMixin):
             elif st.shells:
                 out["shell_face_counts"] = [len(p.faces) for p in st.shells]
             return out
+
+    # ------------------------------------------------------------------ printability
+    def printers(self) -> dict:
+        """Every machine on offer, and which of them a slicer on this PC knows about."""
+        from engine import printers as P
+        return {"success": True, **P.catalogue()}
+
+    def printability(self, printer_id: str = "", technology: str = "", pixel_um: float = 0.0,
+                     nozzle_mm: float = 0.0, layer_mm: float = 0.0, thorough: bool = False) -> dict:
+        """
+        Measure the current model against one printer. Reports; changes nothing.
+
+        Whether anything is done about what it finds is the person's decision, so
+        this never touches the mesh and never creates a state.
+        """
+        from engine import printability as PA
+        from engine import printers as P
+
+        with self.lock:
+            st = self._require()
+            profile = P.profile(
+                printer_id=str(printer_id or "")[:120],
+                technology=V.choice(technology, "technology", ("", "resin", "fdm"), "") if technology else "",
+                pixel_um=V.number(pixel_um, "pixel_um", 0.0, 500.0, 0.0),
+                nozzle_mm=V.number(nozzle_mm, "nozzle_mm", 0.0, 5.0, 0.0),
+                layer_mm=V.number(layer_mm, "layer_mm", 0.0, 2.0, 0.0))
+            label = f"Checking against {profile['name']}"
+            with self._job("printability", label, faces=len(st.mesh.faces)):
+                try:
+                    report = PA.check(st.mesh, profile, thorough=bool(thorough))
+                except PA.NotMeasurable as why:
+                    raise ServiceError(str(why))
+            lost = report.get("missing_share")
+            self.log(f"{profile['name']}: {report['verdict']}"
+                     + (f" — {lost:.1%} of the model is finer than {profile['min_feature_mm']:.3f} mm"
+                        if lost else ""),
+                     "warn" if not report["printable"] else "ok")
+            for doubt in report["doubts"]:
+                self.log(f"Not confirmed: {doubt}", "warn")
+            return {"success": True, "state_id": st.id, "report": report}
 
     def close(self):
         if self.store:

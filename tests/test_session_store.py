@@ -55,3 +55,17 @@ def test_snapshot_writes_are_non_blocking(tmp_path, monkeypatch):
     svc.store.flush()
     assert elapsed < 2.0
     svc.close()
+
+
+def test_the_test_run_is_sandboxed_away_from_the_real_profile():
+    """
+    conftest.py points LOCALAPPDATA at a temporary folder. If this fails, running the tests is
+    writing crash-recovery stubs into someone's real profile again.
+    """
+    import os
+    import tempfile
+
+    from engine.session_store import sessions_root
+    root = os.path.realpath(sessions_root())
+    assert root.startswith(os.path.realpath(tempfile.gettempdir())), root
+    assert "meshwright-tests-" in root, root

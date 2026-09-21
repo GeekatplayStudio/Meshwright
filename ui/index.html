@@ -253,6 +253,33 @@
                     <button id="btnBakeGLB" class="btn btn-primary wide" style="margin-top:6px;" disabled title="Export self-contained GLB with embedded PBR textures">Save Baked GLB</button>
                 </section>
 
+                <!-- Printer check -->
+                <section class="card" id="cardPrinter">
+                    <h2>Print check &mdash; will it print?</h2>
+                    <p class="hint">Choose the printer this model is going to, and Meshwright measures whether the
+                    detail in it is something that machine can physically make &mdash; nozzle size on a
+                    filament printer, screen pixel on a resin one. Anything too fine is listed and can be
+                    clicked to light it up on the model. It reports only; it changes nothing.</p>
+                    <div class="row">
+                        <span>Maker</span>
+                        <select id="printerMaker"></select>
+                    </div>
+                    <div class="row">
+                        <span>Model</span>
+                        <select id="printerModel"></select>
+                    </div>
+                    <p class="hint" id="printerSpec">–</p>
+                    <div class="row two" id="printerTune">
+                        <label><span id="printerUnitLabel">Nozzle (mm)</span>
+                            <input type="number" id="printerUnit" step="0.01" min="0.01" max="500"></label>
+                        <label><span>Layer (mm)</span>
+                            <input type="number" id="printerLayer" step="0.01" min="0.01" max="2"></label>
+                    </div>
+                    <label class="check"><input type="checkbox" id="chkThorough"><span>Check every layer (slower, exact)</span></label>
+                    <button id="btnPrintCheck" class="btn btn-primary wide" disabled>Check this model</button>
+                    <div id="printResult"></div>
+                </section>
+
                 <!-- Export -->
                 <section class="card">
                     <h2>Export</h2>
@@ -355,6 +382,39 @@
     </div>
 </div>
 
+<div class="modal hidden" id="browser">
+    <div class="modal-card browser-card">
+        <div class="browser-head">
+            <h2>Open model</h2>
+            <p class="hint">Pick a file to see what is in it before it is opened.</p>
+            <div class="browser-head-actions">
+                <button id="btnBrowseWindows" class="btn small" title="Use the standard Windows file dialog instead">Windows dialog…</button>
+                <button class="about-close" id="btnBrowserClose" title="Close (Esc)">&times;</button>
+            </div>
+        </div>
+
+        <div class="browser-bar">
+            <button id="btnBrowseUp" class="btn small" title="Up one folder (Backspace)">&uarr;</button>
+            <div class="crumbs" id="browserCrumbs"></div>
+            <input type="text" id="browserFilter" class="browser-filter" placeholder="Filter by name" spellcheck="false">
+        </div>
+
+        <div class="browser-body">
+            <nav class="browser-places" id="browserPlaces"></nav>
+            <div class="browser-list" id="browserList" tabindex="0"></div>
+            <aside class="browser-preview" id="browserPreview"></aside>
+        </div>
+
+        <div class="browser-foot">
+            <label class="check"><input type="checkbox" id="browserShowAll"><span>Show every file</span></label>
+            <span class="muted" id="browserCount"></span>
+            <span class="browser-spacer"></span>
+            <button id="btnBrowserCancel" class="btn">Cancel</button>
+            <button id="btnBrowserOpen" class="btn btn-primary" disabled>Open</button>
+        </div>
+    </div>
+</div>
+
 <div class="modal hidden" id="uvModal">
     <div class="modal-card uv-card">
         <button class="about-close" id="btnUvClose" title="Close (Esc)">&times;</button>
@@ -381,8 +441,10 @@
 </div>
 
 <script src="js/viewer.js"></script>
+<script src="js/browser.js"></script>
 <script src="js/app.js"></script>
 <script src="js/texture_ui.js"></script>
+<script src="js/printer.js"></script>
 <script src="js/walker.js"></script>
 </body>
 </html>

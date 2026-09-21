@@ -1,0 +1,3188 @@
+{
+ "machines": [
+  {
+   "maker": "Anycubic",
+   "model": "Kobra 2",
+   "technology": "fdm",
+   "nozzle_mm": 0.4,
+   "build_mm": [
+    220,
+    220,
+    250
+   ],
+   "layer_mm": 0.2
+  },
+  {
+   "maker": "Anycubic",
+   "model": "Kobra 3",
+   "technology": "fdm",
+   "nozzle_mm": 0.4,
+   "build_mm": [
+    250,
+    250,
+    260
+   ],
+   "layer_mm": 0.2
+  },
+  {
+   "maker": "Anycubic",
+   "model": "Kobra S1",
+   "technology": "fdm",
+   "nozzle_mm": 0.4,
+   "build_mm": [
+    250,
+    250,
+    250
+   ],
+   "layer_mm": 0.2
+  },
+  {
+   "maker": "Artillery",
+   "model": "Sidewinder X4 Plus",
+   "technology": "fdm",
+   "nozzle_mm": 0.4,
+   "build_mm": [
+    300,
+    300,
+    400
+   ],
+   "layer_mm": 0.2
+  },
+  {
+   "maker": "Bambu Lab",
+   "model": "A1",
+   "technology": "fdm",
+   "nozzle_mm": 0.4,
+   "build_mm": [
+    256,
+    256,
+    256
+   ],
+   "layer_mm": 0.2
+  },
+  {
+   "maker": "Bambu Lab",
+   "model": "A1 mini",
+   "technology": "fdm",
+   "nozzle_mm": 0.4,
+   "build_mm": [
+    180,
+    180,
+    180
+   ],
+   "layer_mm": 0.2
+  },
+  {
+   "maker": "Bambu Lab",
+   "model": "H2D",
+   "technology": "fdm",
+   "nozzle_mm": 0.4,
+   "build_mm": [
+    350,
+    320,
+    325
+   ],
+   "layer_mm": 0.2
+  },
+  {
+   "maker": "Bambu Lab",
+   "model": "P1P",
+   "technology": "fdm",
+   "nozzle_mm": 0.4,
+   "build_mm": [
+    256,
+    256,
+    256
+   ],
+   "layer_mm": 0.2
+  },
+  {
+   "maker": "Bambu Lab",
+   "model": "P1S",
+   "technology": "fdm",
+   "nozzle_mm": 0.4,
+   "build_mm": [
+    256,
+    256,
+    256
+   ],
+   "layer_mm": 0.2
+  },
+  {
+   "maker": "Bambu Lab",
+   "model": "X1 Carbon",
+   "technology": "fdm",
+   "nozzle_mm": 0.4,
+   "build_mm": [
+    256,
+    256,
+    256
+   ],
+   "layer_mm": 0.2
+  },
+  {
+   "maker": "Creality",
+   "model": "CR-10 Smart Pro",
+   "technology": "fdm",
+   "nozzle_mm": 0.4,
+   "build_mm": [
+    300,
+    300,
+    400
+   ],
+   "layer_mm": 0.2
+  },
+  {
+   "maker": "Creality",
+   "model": "Ender 3 S1 Pro",
+   "technology": "fdm",
+   "nozzle_mm": 0.4,
+   "build_mm": [
+    220,
+    220,
+    270
+   ],
+   "layer_mm": 0.2
+  },
+  {
+   "maker": "Creality",
+   "model": "Ender 3 V3",
+   "technology": "fdm",
+   "nozzle_mm": 0.4,
+   "build_mm": [
+    220,
+    220,
+    250
+   ],
+   "layer_mm": 0.2
+  },
+  {
+   "maker": "Creality",
+   "model": "Ender 5 S1",
+   "technology": "fdm",
+   "nozzle_mm": 0.4,
+   "build_mm": [
+    220,
+    220,
+    280
+   ],
+   "layer_mm": 0.2
+  },
+  {
+   "maker": "Creality",
+   "model": "K1",
+   "technology": "fdm",
+   "nozzle_mm": 0.4,
+   "build_mm": [
+    220,
+    220,
+    250
+   ],
+   "layer_mm": 0.2
+  },
+  {
+   "maker": "Creality",
+   "model": "K1 Max",
+   "technology": "fdm",
+   "nozzle_mm": 0.4,
+   "build_mm": [
+    300,
+    300,
+    300
+   ],
+   "layer_mm": 0.2
+  },
+  {
+   "maker": "Creality",
+   "model": "K2 Plus",
+   "technology": "fdm",
+   "nozzle_mm": 0.4,
+   "build_mm": [
+    350,
+    350,
+    350
+   ],
+   "layer_mm": 0.2
+  },
+  {
+   "maker": "Elegoo",
+   "model": "Centauri Carbon",
+   "technology": "fdm",
+   "nozzle_mm": 0.4,
+   "build_mm": [
+    256,
+    256,
+    256
+   ],
+   "layer_mm": 0.2
+  },
+  {
+   "maker": "Elegoo",
+   "model": "Neptune 4",
+   "technology": "fdm",
+   "nozzle_mm": 0.4,
+   "build_mm": [
+    225,
+    225,
+    265
+   ],
+   "layer_mm": 0.2
+  },
+  {
+   "maker": "Elegoo",
+   "model": "Neptune 4 Plus",
+   "technology": "fdm",
+   "nozzle_mm": 0.4,
+   "build_mm": [
+    320,
+    320,
+    385
+   ],
+   "layer_mm": 0.2
+  },
+  {
+   "maker": "Flashforge",
+   "model": "Adventurer 5M Pro",
+   "technology": "fdm",
+   "nozzle_mm": 0.4,
+   "build_mm": [
+    220,
+    220,
+    220
+   ],
+   "layer_mm": 0.2
+  },
+  {
+   "maker": "Prusa",
+   "model": "CORE One",
+   "technology": "fdm",
+   "nozzle_mm": 0.4,
+   "build_mm": [
+    250,
+    220,
+    270
+   ],
+   "layer_mm": 0.2
+  },
+  {
+   "maker": "Prusa",
+   "model": "MINI+",
+   "technology": "fdm",
+   "nozzle_mm": 0.4,
+   "build_mm": [
+    180,
+    180,
+    180
+   ],
+   "layer_mm": 0.2
+  },
+  {
+   "maker": "Prusa",
+   "model": "MK3S+",
+   "technology": "fdm",
+   "nozzle_mm": 0.4,
+   "build_mm": [
+    250,
+    210,
+    210
+   ],
+   "layer_mm": 0.2
+  },
+  {
+   "maker": "Prusa",
+   "model": "MK4S",
+   "technology": "fdm",
+   "nozzle_mm": 0.4,
+   "build_mm": [
+    250,
+    210,
+    220
+   ],
+   "layer_mm": 0.2
+  },
+  {
+   "maker": "Prusa",
+   "model": "XL",
+   "technology": "fdm",
+   "nozzle_mm": 0.4,
+   "build_mm": [
+    360,
+    360,
+    360
+   ],
+   "layer_mm": 0.2
+  },
+  {
+   "maker": "QIDI",
+   "model": "Q1 Pro",
+   "technology": "fdm",
+   "nozzle_mm": 0.4,
+   "build_mm": [
+    245,
+    245,
+    240
+   ],
+   "layer_mm": 0.2
+  },
+  {
+   "maker": "QIDI",
+   "model": "X-Plus 3",
+   "technology": "fdm",
+   "nozzle_mm": 0.4,
+   "build_mm": [
+    280,
+    280,
+    270
+   ],
+   "layer_mm": 0.2
+  },
+  {
+   "maker": "Sovol",
+   "model": "SV06 Plus",
+   "technology": "fdm",
+   "nozzle_mm": 0.4,
+   "build_mm": [
+    300,
+    300,
+    340
+   ],
+   "layer_mm": 0.2
+  },
+  {
+   "maker": "Sovol",
+   "model": "SV08",
+   "technology": "fdm",
+   "nozzle_mm": 0.4,
+   "build_mm": [
+    350,
+    350,
+    345
+   ],
+   "layer_mm": 0.2
+  },
+  {
+   "maker": "Ultimaker",
+   "model": "S5",
+   "technology": "fdm",
+   "nozzle_mm": 0.4,
+   "build_mm": [
+    330,
+    240,
+    300
+   ],
+   "layer_mm": 0.2
+  },
+  {
+   "maker": "Voron",
+   "model": "2.4 (350)",
+   "technology": "fdm",
+   "nozzle_mm": 0.4,
+   "build_mm": [
+    350,
+    350,
+    350
+   ],
+   "layer_mm": 0.2
+  },
+  {
+   "maker": "Anycubic",
+   "model": "Default",
+   "technology": "resin",
+   "pixel_um": 28.5,
+   "resolution": [
+    7680,
+    4320
+   ],
+   "build_mm": [
+    218.9,
+    123.1,
+    250.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Anycubic",
+   "model": "Photon",
+   "technology": "resin",
+   "pixel_um": 47.25,
+   "resolution": [
+    1440,
+    2560
+   ],
+   "build_mm": [
+    68.0,
+    121.0,
+    150.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Anycubic",
+   "model": "Photon D2",
+   "technology": "resin",
+   "pixel_um": 51.0,
+   "resolution": [
+    2560,
+    1440
+   ],
+   "build_mm": [
+    130.6,
+    73.4,
+    165.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Anycubic",
+   "model": "Photon M3",
+   "technology": "resin",
+   "pixel_um": 40.02,
+   "resolution": [
+    4096,
+    2560
+   ],
+   "build_mm": [
+    163.9,
+    102.4,
+    180.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Anycubic",
+   "model": "Photon M3 Max",
+   "technology": "resin",
+   "pixel_um": 46.0,
+   "resolution": [
+    6480,
+    3600
+   ],
+   "build_mm": [
+    298.1,
+    165.6,
+    300.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Anycubic",
+   "model": "Photon M3 Plus",
+   "technology": "resin",
+   "pixel_um": 34.2,
+   "resolution": [
+    5760,
+    3600
+   ],
+   "build_mm": [
+    197.0,
+    122.8,
+    245.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Anycubic",
+   "model": "Photon Mono",
+   "technology": "resin",
+   "pixel_um": 51.0,
+   "resolution": [
+    1620,
+    2560
+   ],
+   "build_mm": [
+    82.6,
+    130.6,
+    165.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Anycubic",
+   "model": "Photon Mono 2",
+   "technology": "resin",
+   "pixel_um": 35.0,
+   "resolution": [
+    4096,
+    2560
+   ],
+   "build_mm": [
+    143.4,
+    89.1,
+    165.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Anycubic",
+   "model": "Photon Mono 4",
+   "technology": "resin",
+   "pixel_um": 17.0,
+   "resolution": [
+    9024,
+    5120
+   ],
+   "build_mm": [
+    153.4,
+    87.0,
+    165.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Anycubic",
+   "model": "Photon Mono 4 Ultra",
+   "technology": "resin",
+   "pixel_um": 17.0,
+   "resolution": [
+    9024,
+    5120
+   ],
+   "build_mm": [
+    153.4,
+    87.0,
+    165.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Anycubic",
+   "model": "Photon Mono 4K",
+   "technology": "resin",
+   "pixel_um": 35.0,
+   "resolution": [
+    3840,
+    2400
+   ],
+   "build_mm": [
+    134.4,
+    84.0,
+    165.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Anycubic",
+   "model": "Photon Mono M5",
+   "technology": "resin",
+   "pixel_um": 19.0,
+   "resolution": [
+    11520,
+    5120
+   ],
+   "build_mm": [
+    218.9,
+    122.9,
+    200.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Anycubic",
+   "model": "Photon Mono M5s",
+   "technology": "resin",
+   "pixel_um": 19.0,
+   "resolution": [
+    11520,
+    5120
+   ],
+   "build_mm": [
+    218.9,
+    122.9,
+    200.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Anycubic",
+   "model": "Photon Mono M5s Pro",
+   "technology": "resin",
+   "pixel_um": 16.8,
+   "resolution": [
+    13312,
+    5120
+   ],
+   "build_mm": [
+    223.6,
+    126.5,
+    200.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Anycubic",
+   "model": "Photon Mono M7",
+   "technology": "resin",
+   "pixel_um": 16.8,
+   "resolution": [
+    13312,
+    5120
+   ],
+   "build_mm": [
+    223.6,
+    126.5,
+    230.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Anycubic",
+   "model": "Photon Mono M7 Max",
+   "technology": "resin",
+   "pixel_um": 45.91,
+   "resolution": [
+    6480,
+    3600
+   ],
+   "build_mm": [
+    297.5,
+    164.0,
+    300.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Anycubic",
+   "model": "Photon Mono M7 Pro",
+   "technology": "resin",
+   "pixel_um": 16.8,
+   "resolution": [
+    13312,
+    5120
+   ],
+   "build_mm": [
+    223.6,
+    126.5,
+    230.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Anycubic",
+   "model": "Photon Mono SE",
+   "technology": "resin",
+   "pixel_um": 51.0,
+   "resolution": [
+    1620,
+    2560
+   ],
+   "build_mm": [
+    82.6,
+    130.6,
+    160.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Anycubic",
+   "model": "Photon Mono X",
+   "technology": "resin",
+   "pixel_um": 50.0,
+   "resolution": [
+    3840,
+    2400
+   ],
+   "build_mm": [
+    192.0,
+    120.0,
+    245.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Anycubic",
+   "model": "Photon Mono X 6K",
+   "technology": "resin",
+   "pixel_um": 34.4,
+   "resolution": [
+    5760,
+    3600
+   ],
+   "build_mm": [
+    198.1,
+    123.8,
+    245.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Anycubic",
+   "model": "Photon Mono X2",
+   "technology": "resin",
+   "pixel_um": 48.02,
+   "resolution": [
+    4096,
+    2560
+   ],
+   "build_mm": [
+    196.7,
+    122.9,
+    200.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Anycubic",
+   "model": "Photon Mono X6Ks",
+   "technology": "resin",
+   "pixel_um": 34.0,
+   "resolution": [
+    5760,
+    3600
+   ],
+   "build_mm": [
+    195.8,
+    122.4,
+    200.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Anycubic",
+   "model": "Photon S",
+   "technology": "resin",
+   "pixel_um": 47.25,
+   "resolution": [
+    1440,
+    2560
+   ],
+   "build_mm": [
+    68.0,
+    121.0,
+    165.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Anycubic",
+   "model": "Photon SQ",
+   "technology": "resin",
+   "pixel_um": 50.0,
+   "resolution": [
+    2400,
+    2560
+   ],
+   "build_mm": [
+    120.0,
+    128.0,
+    200.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Anycubic",
+   "model": "Photon Ultra",
+   "technology": "resin",
+   "pixel_um": 80.0,
+   "resolution": [
+    1280,
+    720
+   ],
+   "build_mm": [
+    102.4,
+    57.6,
+    165.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Anycubic",
+   "model": "Photon X",
+   "technology": "resin",
+   "pixel_um": 75.0,
+   "resolution": [
+    2560,
+    1600
+   ],
+   "build_mm": [
+    192.0,
+    120.0,
+    245.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Anycubic",
+   "model": "Photon Zero",
+   "technology": "resin",
+   "pixel_um": 115.5,
+   "resolution": [
+    480,
+    854
+   ],
+   "build_mm": [
+    55.4,
+    98.6,
+    150.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Carima",
+   "model": "IMC-110",
+   "technology": "resin",
+   "pixel_um": 57.29,
+   "resolution": [
+    1920,
+    1080
+   ],
+   "build_mm": [
+    110.0,
+    61.0,
+    140.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Carima",
+   "model": "IMC-57",
+   "technology": "resin",
+   "pixel_um": 29.69,
+   "resolution": [
+    1920,
+    1080
+   ],
+   "build_mm": [
+    57.0,
+    32.0,
+    100.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Carima",
+   "model": "IMC-76",
+   "technology": "resin",
+   "pixel_um": 39.58,
+   "resolution": [
+    1920,
+    1080
+   ],
+   "build_mm": [
+    76.0,
+    42.0,
+    140.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Carima",
+   "model": "IMC-96",
+   "technology": "resin",
+   "pixel_um": 50.0,
+   "resolution": [
+    1920,
+    1080
+   ],
+   "build_mm": [
+    96.0,
+    54.0,
+    140.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Carima",
+   "model": "IMD-110",
+   "technology": "resin",
+   "pixel_um": 57.29,
+   "resolution": [
+    1920,
+    1080
+   ],
+   "build_mm": [
+    110.0,
+    61.0,
+    140.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Carima",
+   "model": "IMD-124",
+   "technology": "resin",
+   "pixel_um": 64.58,
+   "resolution": [
+    1920,
+    1080
+   ],
+   "build_mm": [
+    124.0,
+    70.0,
+    140.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Carima",
+   "model": "IMD-57",
+   "technology": "resin",
+   "pixel_um": 29.69,
+   "resolution": [
+    1920,
+    1080
+   ],
+   "build_mm": [
+    57.0,
+    32.0,
+    100.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Carima",
+   "model": "IMD-76",
+   "technology": "resin",
+   "pixel_um": 39.58,
+   "resolution": [
+    1920,
+    1080
+   ],
+   "build_mm": [
+    76.0,
+    42.0,
+    140.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Carima",
+   "model": "IMD-96",
+   "technology": "resin",
+   "pixel_um": 50.0,
+   "resolution": [
+    1920,
+    1080
+   ],
+   "build_mm": [
+    96.0,
+    54.0,
+    140.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Carima",
+   "model": "LM1",
+   "technology": "resin",
+   "pixel_um": 50.78,
+   "resolution": [
+    2560,
+    1620
+   ],
+   "build_mm": [
+    130.0,
+    80.0,
+    150.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Creality",
+   "model": "HALOT-LITE",
+   "technology": "resin",
+   "pixel_um": 50.0,
+   "resolution": [
+    3840,
+    2400
+   ],
+   "build_mm": [
+    192.0,
+    120.0,
+    200.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Creality",
+   "model": "HALOT-MAGE",
+   "technology": "resin",
+   "pixel_um": 29.7,
+   "resolution": [
+    7680,
+    4320
+   ],
+   "build_mm": [
+    228.1,
+    128.3,
+    230.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Creality",
+   "model": "HALOT-MAGE PRO",
+   "technology": "resin",
+   "pixel_um": 29.7,
+   "resolution": [
+    7680,
+    4320
+   ],
+   "build_mm": [
+    228.1,
+    128.3,
+    230.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Creality",
+   "model": "HALOT-MAGE S",
+   "technology": "resin",
+   "pixel_um": 16.74,
+   "resolution": [
+    13320,
+    5120
+   ],
+   "build_mm": [
+    223.0,
+    126.0,
+    230.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Creality",
+   "model": "HALOT-ONE",
+   "technology": "resin",
+   "pixel_um": 50.0,
+   "resolution": [
+    1620,
+    2560
+   ],
+   "build_mm": [
+    81.0,
+    128.0,
+    160.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Creality",
+   "model": "HALOT-ONE PLUS",
+   "technology": "resin",
+   "pixel_um": 40.0,
+   "resolution": [
+    4320,
+    2560
+   ],
+   "build_mm": [
+    172.8,
+    102.4,
+    160.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Creality",
+   "model": "HALOT-ONE PRO",
+   "technology": "resin",
+   "pixel_um": 51.0,
+   "resolution": [
+    2560,
+    2400
+   ],
+   "build_mm": [
+    130.6,
+    122.4,
+    160.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Creality",
+   "model": "HALOT-PLAY",
+   "technology": "resin",
+   "pixel_um": 50.0,
+   "resolution": [
+    3840,
+    2400
+   ],
+   "build_mm": [
+    192.0,
+    120.0,
+    200.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Creality",
+   "model": "HALOT-R6",
+   "technology": "resin",
+   "pixel_um": 51.0,
+   "resolution": [
+    1620,
+    2560
+   ],
+   "build_mm": [
+    82.6,
+    130.6,
+    160.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Creality",
+   "model": "HALOT-RAY",
+   "technology": "resin",
+   "pixel_um": 34.4,
+   "resolution": [
+    5760,
+    3600
+   ],
+   "build_mm": [
+    198.1,
+    123.8,
+    210.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Creality",
+   "model": "LD-002H",
+   "technology": "resin",
+   "pixel_um": 51.0,
+   "resolution": [
+    1620,
+    2560
+   ],
+   "build_mm": [
+    82.6,
+    130.6,
+    160.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Creality",
+   "model": "LD-002R",
+   "technology": "resin",
+   "pixel_um": 47.25,
+   "resolution": [
+    1440,
+    2560
+   ],
+   "build_mm": [
+    68.0,
+    121.0,
+    160.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Creality",
+   "model": "LD-006",
+   "technology": "resin",
+   "pixel_um": 50.0,
+   "resolution": [
+    3840,
+    2400
+   ],
+   "build_mm": [
+    192.0,
+    120.0,
+    250.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Elegoo",
+   "model": "Jupiter",
+   "technology": "resin",
+   "pixel_um": 51.0,
+   "resolution": [
+    5448,
+    3064
+   ],
+   "build_mm": [
+    277.8,
+    156.3,
+    300.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Elegoo",
+   "model": "Jupiter Se",
+   "technology": "resin",
+   "pixel_um": 51.0,
+   "resolution": [
+    5448,
+    3064
+   ],
+   "build_mm": [
+    277.8,
+    156.3,
+    300.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Elegoo",
+   "model": "Mars",
+   "technology": "resin",
+   "pixel_um": 47.25,
+   "resolution": [
+    1440,
+    2560
+   ],
+   "build_mm": [
+    68.0,
+    121.0,
+    150.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Elegoo",
+   "model": "Mars 2",
+   "technology": "resin",
+   "pixel_um": 51.0,
+   "resolution": [
+    1620,
+    2560
+   ],
+   "build_mm": [
+    82.6,
+    130.6,
+    150.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Elegoo",
+   "model": "Mars 2 Pro",
+   "technology": "resin",
+   "pixel_um": 51.0,
+   "resolution": [
+    1620,
+    2560
+   ],
+   "build_mm": [
+    82.6,
+    130.6,
+    160.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Elegoo",
+   "model": "Mars 3",
+   "technology": "resin",
+   "pixel_um": 35.0,
+   "resolution": [
+    4098,
+    2560
+   ],
+   "build_mm": [
+    143.4,
+    89.6,
+    175.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Elegoo",
+   "model": "Mars 3 Pro",
+   "technology": "resin",
+   "pixel_um": 35.0,
+   "resolution": [
+    4098,
+    2560
+   ],
+   "build_mm": [
+    143.4,
+    89.6,
+    175.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Elegoo",
+   "model": "Mars 4",
+   "technology": "resin",
+   "pixel_um": 18.0,
+   "resolution": [
+    8520,
+    4320
+   ],
+   "build_mm": [
+    153.4,
+    77.8,
+    175.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Elegoo",
+   "model": "Mars 4 Dlp",
+   "technology": "resin",
+   "pixel_um": 51.88,
+   "resolution": [
+    2560,
+    1440
+   ],
+   "build_mm": [
+    132.8,
+    74.7,
+    150.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Elegoo",
+   "model": "Mars 4 Max",
+   "technology": "resin",
+   "pixel_um": 34.0,
+   "resolution": [
+    5760,
+    3600
+   ],
+   "build_mm": [
+    195.8,
+    122.4,
+    150.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Elegoo",
+   "model": "Mars 4 Ultra",
+   "technology": "resin",
+   "pixel_um": 18.0,
+   "resolution": [
+    8520,
+    4320
+   ],
+   "build_mm": [
+    153.4,
+    77.8,
+    165.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Elegoo",
+   "model": "Mars 5",
+   "technology": "resin",
+   "pixel_um": 35.0,
+   "resolution": [
+    4098,
+    2560
+   ],
+   "build_mm": [
+    143.4,
+    89.6,
+    150.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Elegoo",
+   "model": "Mars 5 Ultra",
+   "technology": "resin",
+   "pixel_um": 18.0,
+   "resolution": [
+    8520,
+    4320
+   ],
+   "build_mm": [
+    153.4,
+    77.8,
+    165.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Elegoo",
+   "model": "Mars C",
+   "technology": "resin",
+   "pixel_um": 47.25,
+   "resolution": [
+    1440,
+    2560
+   ],
+   "build_mm": [
+    68.0,
+    121.0,
+    150.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Elegoo",
+   "model": "Mars Pro",
+   "technology": "resin",
+   "pixel_um": 47.25,
+   "resolution": [
+    1440,
+    2560
+   ],
+   "build_mm": [
+    68.0,
+    121.0,
+    150.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Elegoo",
+   "model": "Saturn",
+   "technology": "resin",
+   "pixel_um": 50.0,
+   "resolution": [
+    3840,
+    2400
+   ],
+   "build_mm": [
+    192.0,
+    120.0,
+    200.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Elegoo",
+   "model": "Saturn 2",
+   "technology": "resin",
+   "pixel_um": 28.5,
+   "resolution": [
+    7680,
+    4320
+   ],
+   "build_mm": [
+    218.9,
+    123.1,
+    250.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Elegoo",
+   "model": "Saturn 3",
+   "technology": "resin",
+   "pixel_um": 19.0,
+   "resolution": [
+    11520,
+    5120
+   ],
+   "build_mm": [
+    218.9,
+    122.9,
+    250.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Elegoo",
+   "model": "Saturn 3 Ultra",
+   "technology": "resin",
+   "pixel_um": 19.0,
+   "resolution": [
+    11520,
+    5120
+   ],
+   "build_mm": [
+    218.9,
+    122.9,
+    260.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Elegoo",
+   "model": "Saturn 4",
+   "technology": "resin",
+   "pixel_um": 19.0,
+   "resolution": [
+    11520,
+    5120
+   ],
+   "build_mm": [
+    218.9,
+    122.9,
+    220.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Elegoo",
+   "model": "Saturn 4 Ultra",
+   "technology": "resin",
+   "pixel_um": 19.0,
+   "resolution": [
+    11520,
+    5120
+   ],
+   "build_mm": [
+    218.9,
+    122.9,
+    220.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Elegoo",
+   "model": "Saturn 4 Ultra 16K",
+   "technology": "resin",
+   "pixel_um": 14.0,
+   "resolution": [
+    15120,
+    6230
+   ],
+   "build_mm": [
+    211.7,
+    118.4,
+    220.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Elegoo",
+   "model": "Saturn 8K",
+   "technology": "resin",
+   "pixel_um": 28.5,
+   "resolution": [
+    7680,
+    4320
+   ],
+   "build_mm": [
+    218.9,
+    123.1,
+    210.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Elegoo",
+   "model": "Saturn S",
+   "technology": "resin",
+   "pixel_um": 48.0,
+   "resolution": [
+    4098,
+    2560
+   ],
+   "build_mm": [
+    196.7,
+    122.9,
+    210.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "EMAKE3D",
+   "model": "Galaxy 1",
+   "technology": "resin",
+   "pixel_um": 50.0,
+   "resolution": [
+    4000,
+    8000
+   ],
+   "build_mm": [
+    200.0,
+    400.0,
+    400.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "EPAX",
+   "model": "DX1 PRO",
+   "technology": "resin",
+   "pixel_um": 35.0,
+   "resolution": [
+    4098,
+    2560
+   ],
+   "build_mm": [
+    143.4,
+    89.6,
+    120.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "EPAX",
+   "model": "DX10 PRO 5K",
+   "technology": "resin",
+   "pixel_um": 45.0,
+   "resolution": [
+    4920,
+    2880
+   ],
+   "build_mm": [
+    221.4,
+    129.6,
+    120.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "EPAX",
+   "model": "DX10 PRO 8K/8KW",
+   "technology": "resin",
+   "pixel_um": 28.5,
+   "resolution": [
+    7680,
+    4320
+   ],
+   "build_mm": [
+    218.9,
+    123.1,
+    120.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "EPAX",
+   "model": "E10 14K",
+   "technology": "resin",
+   "pixel_um": 28.5,
+   "resolution": [
+    7680,
+    4320
+   ],
+   "build_mm": [
+    218.9,
+    123.1,
+    250.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "EPAX",
+   "model": "E10 14KW",
+   "technology": "resin",
+   "pixel_um": 16.8,
+   "resolution": [
+    13320,
+    5120
+   ],
+   "build_mm": [
+    223.8,
+    127.0,
+    240.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "EPAX",
+   "model": "E10 4K",
+   "technology": "resin",
+   "pixel_um": 50.0,
+   "resolution": [
+    3840,
+    2400
+   ],
+   "build_mm": [
+    192.0,
+    120.0,
+    250.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "EPAX",
+   "model": "E10 5K",
+   "technology": "resin",
+   "pixel_um": 45.0,
+   "resolution": [
+    4920,
+    2880
+   ],
+   "build_mm": [
+    221.4,
+    129.6,
+    250.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "EPAX",
+   "model": "E10 8K",
+   "technology": "resin",
+   "pixel_um": 28.5,
+   "resolution": [
+    7680,
+    4320
+   ],
+   "build_mm": [
+    218.9,
+    123.1,
+    250.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "EPAX",
+   "model": "E6",
+   "technology": "resin",
+   "pixel_um": 50.0,
+   "resolution": [
+    1620,
+    2560
+   ],
+   "build_mm": [
+    81.0,
+    128.0,
+    155.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "EPAX",
+   "model": "X1",
+   "technology": "resin",
+   "pixel_um": 47.25,
+   "resolution": [
+    1440,
+    2560
+   ],
+   "build_mm": [
+    68.0,
+    121.0,
+    155.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "EPAX",
+   "model": "X1-4K",
+   "technology": "resin",
+   "pixel_um": 31.5,
+   "resolution": [
+    2160,
+    3840
+   ],
+   "build_mm": [
+    68.0,
+    121.0,
+    155.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "EPAX",
+   "model": "X1-4KS",
+   "technology": "resin",
+   "pixel_um": 35.0,
+   "resolution": [
+    4098,
+    2560
+   ],
+   "build_mm": [
+    143.4,
+    89.6,
+    155.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "EPAX",
+   "model": "X10 14KW",
+   "technology": "resin",
+   "pixel_um": 16.8,
+   "resolution": [
+    13320,
+    5120
+   ],
+   "build_mm": [
+    223.8,
+    127.0,
+    250.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "EPAX",
+   "model": "X10 2K Color",
+   "technology": "resin",
+   "pixel_um": 84.6,
+   "resolution": [
+    1600,
+    2560
+   ],
+   "build_mm": [
+    135.4,
+    216.6,
+    250.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "EPAX",
+   "model": "X10 4K",
+   "technology": "resin",
+   "pixel_um": 50.0,
+   "resolution": [
+    3840,
+    2400
+   ],
+   "build_mm": [
+    192.0,
+    120.0,
+    250.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "EPAX",
+   "model": "X10 5K",
+   "technology": "resin",
+   "pixel_um": 45.0,
+   "resolution": [
+    4920,
+    2880
+   ],
+   "build_mm": [
+    221.4,
+    129.6,
+    250.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "EPAX",
+   "model": "X10 8K/8kW",
+   "technology": "resin",
+   "pixel_um": 28.5,
+   "resolution": [
+    7680,
+    4320
+   ],
+   "build_mm": [
+    218.9,
+    123.1,
+    250.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "EPAX",
+   "model": "X133 4K",
+   "technology": "resin",
+   "pixel_um": 76.5,
+   "resolution": [
+    3840,
+    2160
+   ],
+   "build_mm": [
+    293.8,
+    165.2,
+    400.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "EPAX",
+   "model": "X133 6K",
+   "technology": "resin",
+   "pixel_um": 50.0,
+   "resolution": [
+    5760,
+    3240
+   ],
+   "build_mm": [
+    288.0,
+    162.0,
+    400.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "EPAX",
+   "model": "X133 7K",
+   "technology": "resin",
+   "pixel_um": 46.0,
+   "resolution": [
+    6480,
+    3600
+   ],
+   "build_mm": [
+    298.1,
+    165.6,
+    400.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "EPAX",
+   "model": "X156 4K Color",
+   "technology": "resin",
+   "pixel_um": 90.0,
+   "resolution": [
+    3840,
+    2160
+   ],
+   "build_mm": [
+    345.6,
+    194.4,
+    400.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "EPAX",
+   "model": "X160 8K",
+   "technology": "resin",
+   "pixel_um": 46.0,
+   "resolution": [
+    7680,
+    4320
+   ],
+   "build_mm": [
+    353.3,
+    198.7,
+    400.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "EPAX",
+   "model": "X1K",
+   "technology": "resin",
+   "pixel_um": 51.0,
+   "resolution": [
+    1620,
+    2560
+   ],
+   "build_mm": [
+    82.6,
+    130.6,
+    155.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Flashforge",
+   "model": "Explorer Max",
+   "technology": "resin",
+   "pixel_um": 75.0,
+   "resolution": [
+    2560,
+    1600
+   ],
+   "build_mm": [
+    192.0,
+    120.0,
+    200.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Flashforge",
+   "model": "Foto 6.0",
+   "technology": "resin",
+   "pixel_um": 51.0,
+   "resolution": [
+    1620,
+    2560
+   ],
+   "build_mm": [
+    82.6,
+    130.6,
+    155.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Flashforge",
+   "model": "Foto 8.9",
+   "technology": "resin",
+   "pixel_um": 50.0,
+   "resolution": [
+    3840,
+    2400
+   ],
+   "build_mm": [
+    192.0,
+    120.0,
+    200.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "HIFUN",
+   "model": "HF-L1-9K",
+   "technology": "resin",
+   "pixel_um": 18.0,
+   "resolution": [
+    8520,
+    4320
+   ],
+   "build_mm": [
+    153.4,
+    77.8,
+    150.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "HIFUN",
+   "model": "HF-L3-14K",
+   "technology": "resin",
+   "pixel_um": 16.8,
+   "resolution": [
+    13320,
+    5120
+   ],
+   "build_mm": [
+    223.8,
+    127.0,
+    250.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "HIFUN",
+   "model": "HF-L3-14K PRO",
+   "technology": "resin",
+   "pixel_um": 16.8,
+   "resolution": [
+    13320,
+    5120
+   ],
+   "build_mm": [
+    223.8,
+    127.0,
+    240.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "HIFUN",
+   "model": "HF-L5-7K",
+   "technology": "resin",
+   "pixel_um": 46.0,
+   "resolution": [
+    6480,
+    3600
+   ],
+   "build_mm": [
+    298.1,
+    165.6,
+    350.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "HIFUN",
+   "model": "HF-L6-8K",
+   "technology": "resin",
+   "pixel_um": 46.0,
+   "resolution": [
+    7680,
+    4320
+   ],
+   "build_mm": [
+    353.3,
+    198.7,
+    400.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Longer",
+   "model": "3D Orange10",
+   "technology": "resin",
+   "pixel_um": 57.75,
+   "resolution": [
+    960,
+    1708
+   ],
+   "build_mm": [
+    55.4,
+    98.6,
+    140.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Longer",
+   "model": "3D Orange30",
+   "technology": "resin",
+   "pixel_um": 47.25,
+   "resolution": [
+    1440,
+    2560
+   ],
+   "build_mm": [
+    68.0,
+    121.0,
+    170.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Longer",
+   "model": "3D Orange4K",
+   "technology": "resin",
+   "pixel_um": 10.5,
+   "resolution": [
+    6480,
+    3840
+   ],
+   "build_mm": [
+    68.0,
+    121.0,
+    190.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "LYNcase",
+   "model": "LYN cast LY-01",
+   "technology": "resin",
+   "pixel_um": 52.5,
+   "resolution": [
+    2560,
+    1440
+   ],
+   "build_mm": [
+    134.4,
+    75.6,
+    165.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Megalabs",
+   "model": "1",
+   "technology": "resin",
+   "pixel_um": 138.8,
+   "resolution": [
+    3840,
+    2160
+   ],
+   "build_mm": [
+    533.0,
+    299.8,
+    550.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Newbie Box",
+   "model": "Kylin Two",
+   "technology": "resin",
+   "pixel_um": 29.7,
+   "resolution": [
+    7680,
+    4320
+   ],
+   "build_mm": [
+    228.1,
+    128.3,
+    350.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Newbie Box",
+   "model": "Phoenix One",
+   "technology": "resin",
+   "pixel_um": 16.8,
+   "resolution": [
+    13320,
+    5120
+   ],
+   "build_mm": [
+    223.8,
+    127.0,
+    260.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Nova3D",
+   "model": "Bene6",
+   "technology": "resin",
+   "pixel_um": 35.0,
+   "resolution": [
+    4085,
+    2542
+   ],
+   "build_mm": [
+    143.0,
+    89.0,
+    180.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Nova3D",
+   "model": "Whale2",
+   "technology": "resin",
+   "pixel_um": 50.0,
+   "resolution": [
+    3840,
+    2400
+   ],
+   "build_mm": [
+    192.0,
+    120.0,
+    250.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Nova3D",
+   "model": "Whale2 Pro",
+   "technology": "resin",
+   "pixel_um": 29.7,
+   "resolution": [
+    7680,
+    4320
+   ],
+   "build_mm": [
+    228.1,
+    128.3,
+    260.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Nova3D",
+   "model": "Whale3 Pro",
+   "technology": "resin",
+   "pixel_um": 29.7,
+   "resolution": [
+    7680,
+    4320
+   ],
+   "build_mm": [
+    228.1,
+    128.3,
+    260.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Nova3D",
+   "model": "Whale3 SE",
+   "technology": "resin",
+   "pixel_um": 29.7,
+   "resolution": [
+    7680,
+    4320
+   ],
+   "build_mm": [
+    228.1,
+    128.3,
+    260.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Nova3D",
+   "model": "Whale3 Super-14k",
+   "technology": "resin",
+   "pixel_um": 16.8,
+   "resolution": [
+    13320,
+    5120
+   ],
+   "build_mm": [
+    223.8,
+    127.0,
+    260.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Nova3D",
+   "model": "Whale3 Ultar-14k",
+   "technology": "resin",
+   "pixel_um": 16.8,
+   "resolution": [
+    13320,
+    5120
+   ],
+   "build_mm": [
+    223.8,
+    127.0,
+    260.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Nova3D",
+   "model": "Whale3 Ultra-14k",
+   "technology": "resin",
+   "pixel_um": 16.8,
+   "resolution": [
+    13320,
+    5120
+   ],
+   "build_mm": [
+    223.8,
+    127.0,
+    260.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Nova3D",
+   "model": "Whale4",
+   "technology": "resin",
+   "pixel_um": 14.0,
+   "resolution": [
+    15120,
+    6230
+   ],
+   "build_mm": [
+    211.7,
+    118.4,
+    220.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Peopoly",
+   "model": "Phenom",
+   "technology": "resin",
+   "pixel_um": 72.0,
+   "resolution": [
+    3840,
+    2160
+   ],
+   "build_mm": [
+    276.5,
+    155.5,
+    400.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Peopoly",
+   "model": "Phenom L",
+   "technology": "resin",
+   "pixel_um": 90.0,
+   "resolution": [
+    3840,
+    2160
+   ],
+   "build_mm": [
+    345.6,
+    194.4,
+    400.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Peopoly",
+   "model": "Phenom Noir",
+   "technology": "resin",
+   "pixel_um": 76.5,
+   "resolution": [
+    3840,
+    2160
+   ],
+   "build_mm": [
+    293.8,
+    165.2,
+    400.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Peopoly",
+   "model": "Phenom Prime",
+   "technology": "resin",
+   "pixel_um": 51.0,
+   "resolution": [
+    5448,
+    3064
+   ],
+   "build_mm": [
+    277.8,
+    156.3,
+    400.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Peopoly",
+   "model": "Phenom XXL",
+   "technology": "resin",
+   "pixel_um": 137.25,
+   "resolution": [
+    3840,
+    2160
+   ],
+   "build_mm": [
+    527.0,
+    296.5,
+    550.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Phrozen",
+   "model": "Shuffle",
+   "technology": "resin",
+   "pixel_um": 47.0,
+   "resolution": [
+    1440,
+    2560
+   ],
+   "build_mm": [
+    67.7,
+    120.3,
+    200.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Phrozen",
+   "model": "Shuffle 4K",
+   "technology": "resin",
+   "pixel_um": 31.5,
+   "resolution": [
+    2160,
+    3840
+   ],
+   "build_mm": [
+    68.0,
+    121.0,
+    170.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Phrozen",
+   "model": "Shuffle Lite",
+   "technology": "resin",
+   "pixel_um": 47.25,
+   "resolution": [
+    1440,
+    2560
+   ],
+   "build_mm": [
+    68.0,
+    121.0,
+    170.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Phrozen",
+   "model": "Shuffle XL",
+   "technology": "resin",
+   "pixel_um": 75.0,
+   "resolution": [
+    2560,
+    1600
+   ],
+   "build_mm": [
+    192.0,
+    120.0,
+    200.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Phrozen",
+   "model": "Shuffle XL Lite",
+   "technology": "resin",
+   "pixel_um": 75.0,
+   "resolution": [
+    2560,
+    1600
+   ],
+   "build_mm": [
+    192.0,
+    120.0,
+    200.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Phrozen",
+   "model": "Sonic",
+   "technology": "resin",
+   "pixel_um": 63.0,
+   "resolution": [
+    1080,
+    1920
+   ],
+   "build_mm": [
+    68.0,
+    121.0,
+    170.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Phrozen",
+   "model": "Sonic 4K",
+   "technology": "resin",
+   "pixel_um": 35.0,
+   "resolution": [
+    3840,
+    2160
+   ],
+   "build_mm": [
+    134.4,
+    75.6,
+    200.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Phrozen",
+   "model": "Sonic Mega 8K",
+   "technology": "resin",
+   "pixel_um": 43.0,
+   "resolution": [
+    7680,
+    4320
+   ],
+   "build_mm": [
+    330.2,
+    185.8,
+    400.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Phrozen",
+   "model": "Sonic Mega 8K S",
+   "technology": "resin",
+   "pixel_um": 43.0,
+   "resolution": [
+    7680,
+    4320
+   ],
+   "build_mm": [
+    330.2,
+    185.8,
+    300.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Phrozen",
+   "model": "Sonic Mega 8K V2",
+   "technology": "resin",
+   "pixel_um": 43.0,
+   "resolution": [
+    7680,
+    4320
+   ],
+   "build_mm": [
+    330.2,
+    185.8,
+    400.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Phrozen",
+   "model": "Sonic Mighty 12K",
+   "technology": "resin",
+   "pixel_um": 19.0,
+   "resolution": [
+    11520,
+    5120
+   ],
+   "build_mm": [
+    218.9,
+    123.1,
+    235.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Phrozen",
+   "model": "Sonic Mighty 4K",
+   "technology": "resin",
+   "pixel_um": 52.0,
+   "resolution": [
+    3840,
+    2400
+   ],
+   "build_mm": [
+    199.7,
+    124.8,
+    220.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Phrozen",
+   "model": "Sonic Mighty 8K",
+   "technology": "resin",
+   "pixel_um": 28.5,
+   "resolution": [
+    7680,
+    4320
+   ],
+   "build_mm": [
+    218.9,
+    123.1,
+    235.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Phrozen",
+   "model": "Sonic Mighty Revo",
+   "technology": "resin",
+   "pixel_um": 16.8,
+   "resolution": [
+    13320,
+    5120
+   ],
+   "build_mm": [
+    223.8,
+    127.0,
+    235.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Phrozen",
+   "model": "Sonic Mighty Revo 16K",
+   "technology": "resin",
+   "pixel_um": 14.0,
+   "resolution": [
+    15120,
+    6230
+   ],
+   "build_mm": [
+    211.7,
+    118.4,
+    235.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Phrozen",
+   "model": "Sonic Mini",
+   "technology": "resin",
+   "pixel_um": 63.0,
+   "resolution": [
+    1080,
+    1920
+   ],
+   "build_mm": [
+    68.0,
+    121.0,
+    130.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Phrozen",
+   "model": "Sonic Mini 4K",
+   "technology": "resin",
+   "pixel_um": 35.0,
+   "resolution": [
+    3840,
+    2160
+   ],
+   "build_mm": [
+    134.4,
+    75.6,
+    130.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Phrozen",
+   "model": "Sonic Mini 8K",
+   "technology": "resin",
+   "pixel_um": 22.0,
+   "resolution": [
+    7500,
+    3240
+   ],
+   "build_mm": [
+    165.0,
+    71.3,
+    180.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Phrozen",
+   "model": "Sonic Mini 8K S",
+   "technology": "resin",
+   "pixel_um": 22.0,
+   "resolution": [
+    7536,
+    3240
+   ],
+   "build_mm": [
+    165.8,
+    71.3,
+    170.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Phrozen",
+   "model": "Sonic XL 4K",
+   "technology": "resin",
+   "pixel_um": 50.0,
+   "resolution": [
+    3840,
+    2400
+   ],
+   "build_mm": [
+    192.0,
+    120.0,
+    200.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Phrozen",
+   "model": "Transform",
+   "technology": "resin",
+   "pixel_um": 76.0,
+   "resolution": [
+    3840,
+    2160
+   ],
+   "build_mm": [
+    291.8,
+    164.2,
+    400.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Piocreat",
+   "model": "C01",
+   "technology": "resin",
+   "pixel_um": 16.8,
+   "resolution": [
+    13320,
+    5120
+   ],
+   "build_mm": [
+    223.8,
+    127.0,
+    200.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Piocreat",
+   "model": "C02",
+   "technology": "resin",
+   "pixel_um": 16.8,
+   "resolution": [
+    13320,
+    5120
+   ],
+   "build_mm": [
+    223.8,
+    127.0,
+    230.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Piocreat",
+   "model": "HALOT-X1",
+   "technology": "resin",
+   "pixel_um": 14.0,
+   "resolution": [
+    15120,
+    6230
+   ],
+   "build_mm": [
+    211.7,
+    118.4,
+    200.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "PioNext",
+   "model": "C01",
+   "technology": "resin",
+   "pixel_um": 16.8,
+   "resolution": [
+    13320,
+    5120
+   ],
+   "build_mm": [
+    223.8,
+    127.0,
+    200.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "PioNext",
+   "model": "D158",
+   "technology": "resin",
+   "pixel_um": 62.0,
+   "resolution": [
+    2560,
+    1440
+   ],
+   "build_mm": [
+    158.7,
+    89.3,
+    100.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "PioNext",
+   "model": "D160",
+   "technology": "resin",
+   "pixel_um": 62.0,
+   "resolution": [
+    2560,
+    1440
+   ],
+   "build_mm": [
+    158.7,
+    89.3,
+    100.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "PioNext",
+   "model": "DJ89 PLUS",
+   "technology": "resin",
+   "pixel_um": 29.7,
+   "resolution": [
+    7680,
+    4320
+   ],
+   "build_mm": [
+    228.1,
+    128.3,
+    100.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "QIDI",
+   "model": "6.08 mono",
+   "technology": "resin",
+   "pixel_um": 51.0,
+   "resolution": [
+    1620,
+    2560
+   ],
+   "build_mm": [
+    82.6,
+    130.6,
+    150.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "QIDI",
+   "model": "i-box mono",
+   "technology": "resin",
+   "pixel_um": 50.0,
+   "resolution": [
+    3840,
+    2400
+   ],
+   "build_mm": [
+    192.0,
+    120.0,
+    200.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "QIDI",
+   "model": "S-box",
+   "technology": "resin",
+   "pixel_um": 84.6,
+   "resolution": [
+    1600,
+    2560
+   ],
+   "build_mm": [
+    135.4,
+    216.6,
+    200.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "QIDI",
+   "model": "Shadow5.5s",
+   "technology": "resin",
+   "pixel_um": 47.25,
+   "resolution": [
+    1440,
+    2560
+   ],
+   "build_mm": [
+    68.0,
+    121.0,
+    150.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "QIDI",
+   "model": "Shadow6.0 Pro",
+   "technology": "resin",
+   "pixel_um": 51.75,
+   "resolution": [
+    1440,
+    2560
+   ],
+   "build_mm": [
+    74.5,
+    132.5,
+    150.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "SparkMaker",
+   "model": "FHD",
+   "technology": "resin",
+   "pixel_um": 57.3,
+   "resolution": [
+    1920,
+    1080
+   ],
+   "build_mm": [
+    110.0,
+    61.9,
+    125.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "SparkMaker",
+   "model": "Original",
+   "technology": "resin",
+   "pixel_um": 115.5,
+   "resolution": [
+    480,
+    854
+   ],
+   "build_mm": [
+    55.4,
+    98.7,
+    125.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Stellar",
+   "model": "1",
+   "technology": "resin",
+   "pixel_um": 16.8,
+   "resolution": [
+    13320,
+    5120
+   ],
+   "build_mm": [
+    223.8,
+    127.0,
+    200.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Uniformation",
+   "model": "GK3",
+   "technology": "resin",
+   "pixel_um": 14.0,
+   "resolution": [
+    15120,
+    6230
+   ],
+   "build_mm": [
+    211.7,
+    118.4,
+    240.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Uniformation",
+   "model": "GK3 Pro",
+   "technology": "resin",
+   "pixel_um": 14.0,
+   "resolution": [
+    15120,
+    6230
+   ],
+   "build_mm": [
+    211.7,
+    118.4,
+    240.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Uniformation",
+   "model": "GK3 Ultra",
+   "technology": "resin",
+   "pixel_um": 20.0,
+   "resolution": [
+    15120,
+    6230
+   ],
+   "build_mm": [
+    302.4,
+    162.0,
+    300.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Uniformation",
+   "model": "GKtwo",
+   "technology": "resin",
+   "pixel_um": 29.7,
+   "resolution": [
+    7680,
+    4320
+   ],
+   "build_mm": [
+    228.1,
+    128.3,
+    245.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Voxelab",
+   "model": "Ceres 8.9",
+   "technology": "resin",
+   "pixel_um": 50.0,
+   "resolution": [
+    3840,
+    2400
+   ],
+   "build_mm": [
+    192.0,
+    120.0,
+    200.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Voxelab",
+   "model": "Polaris 5.5",
+   "technology": "resin",
+   "pixel_um": 47.25,
+   "resolution": [
+    1440,
+    2560
+   ],
+   "build_mm": [
+    68.0,
+    121.0,
+    155.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Voxelab",
+   "model": "Proxima 6",
+   "technology": "resin",
+   "pixel_um": 51.0,
+   "resolution": [
+    1620,
+    2560
+   ],
+   "build_mm": [
+    82.6,
+    130.6,
+    155.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Wanhao",
+   "model": "CGR MINI MONO",
+   "technology": "resin",
+   "pixel_um": 51.0,
+   "resolution": [
+    1620,
+    2560
+   ],
+   "build_mm": [
+    82.6,
+    130.6,
+    200.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Wanhao",
+   "model": "CGR MONO",
+   "technology": "resin",
+   "pixel_um": 50.0,
+   "resolution": [
+    3840,
+    2400
+   ],
+   "build_mm": [
+    192.0,
+    120.0,
+    180.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Wanhao",
+   "model": "D7",
+   "technology": "resin",
+   "pixel_um": 47.25,
+   "resolution": [
+    2560,
+    1440
+   ],
+   "build_mm": [
+    121.0,
+    68.5,
+    180.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Wanhao",
+   "model": "D8",
+   "technology": "resin",
+   "pixel_um": 75.0,
+   "resolution": [
+    2560,
+    1600
+   ],
+   "build_mm": [
+    192.0,
+    120.0,
+    180.0
+   ],
+   "layer_mm": 0.05
+  },
+  {
+   "maker": "Zortrax",
+   "model": "Inkspire",
+   "technology": "resin",
+   "pixel_um": 51.85,
+   "resolution": [
+    1440,
+    2560
+   ],
+   "build_mm": [
+    74.7,
+    132.9,
+    175.0
+   ],
+   "layer_mm": 0.05
+  }
+ ]
+}

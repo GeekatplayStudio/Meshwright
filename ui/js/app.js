@@ -98,7 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (res.analysis) renderAnalysis(res.analysis);
         renderShells(res.shells || null);
         updateStateUI(res);
-        for (const id of ['btnRepair', 'btnReduce', 'btnExport', 'sliderReduce', 'targetInput', 'btnUnwrapUV', 'btnLoadTexture', 'btnOpenUv']) {
+        for (const id of ['btnRepair', 'btnReduce', 'btnExport', 'sliderReduce', 'targetInput', 'btnUnwrapUV', 'btnLoadTexture', 'btnOpenUv', 'btnPrintCheck']) {
             if ($(id)) $(id).disabled = false;
         }
         document.querySelectorAll('.rot').forEach(b => b.disabled = false);
@@ -899,8 +899,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     $('btnOpen').addEventListener('click', async () => {
         if (!api()) return;
-        const path = await api().select_file_dialog();
-        if (path) loadFile(path);
+        // Meshwright's own browser, which can show what a file holds before it is
+        // opened; it offers the Windows dialog as a way out. If it is somehow not
+        // there, fall straight back to Windows rather than leaving the button dead.
+        if (window.meshwrightBrowser) window.meshwrightBrowser.open(loadFile);
+        else {
+            const path = await api().select_file_dialog();
+            if (path) loadFile(path);
+        }
     });
 
     /* ---------- close the model / start over ---------- */
@@ -925,6 +931,7 @@ document.addEventListener('DOMContentLoaded', () => {
         $('fileName').textContent = '';
         $('stateBadge').textContent = '';
         $('reduceResult').textContent = '';
+        if (window.meshwrightPrinter) window.meshwrightPrinter.clear();
         $('issueCount').textContent = '';
         $('issueList').innerHTML = '<li class="muted">—</li>';
         $('btnSlivers').classList.add('hidden');
@@ -943,7 +950,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         for (const id of ['btnRepair', 'btnReduce', 'btnExport', 'sliderReduce', 'targetInput',
                           'btnUndo', 'btnRedo', 'btnRevert', 'btnReanalyse', 'btnReport',
-                          'btnShellsRemove', 'viewDetail']) {
+                          'btnShellsRemove', 'viewDetail', 'btnPrintCheck']) {
             if ($(id)) $(id).disabled = true;
         }
         if (detailSeg) detailSeg.classList.remove('reduced');

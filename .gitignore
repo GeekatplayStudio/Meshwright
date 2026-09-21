@@ -23,3 +23,11 @@ ui/assets/walk/frame-*.png
 
 # Scratch models used while debugging; not part of the program.
 assets-test/
+
+# PyInstaller output
+build/
+dist/
+packaging/version_info.txt
+packaging/redist/
+packaging/THIRD_PARTY_NOTICES.txt
+Meshwright-Setup-*.exe

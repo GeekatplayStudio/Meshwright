@@ -17,8 +17,12 @@ import webview
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+from engine.runtime import resource_path
 from engine.service import MeshService, ServiceError
 from engine.validation import ValidationError
+from engine.version import __version__
+
+WEBVIEW2_URL = "https://developer.microsoft.com/microsoft-edge/webview2/"
 
 _state = {'window': None}
 _eval_queue: queue.Queue = queue.Queue()
@@ -137,6 +141,7 @@ class AppApi:
         return result or None
 
     def select_file_dialog(self) -> str:
+        """Windows' own Open dialog, still reachable from inside Meshwright's."""
         return self._dialog("open model", webview.FileDialog.OPEN,
                             allow_multiple=False, file_types=self.MODEL_FILE_TYPES) or ""
 
@@ -151,6 +156,56 @@ class AppApi:
         """Where to save. None means the user cancelled or the dialog failed."""
         return self._dialog("save", webview.FileDialog.SAVE,
                             save_filename=default_name, file_types=file_types)
+
+    # ------------------------------------------------------------------ Meshwright's own file browser
+    #
+    # Windows' Open dialog can show a picture of a Word document but not of a model:
+    # it draws 3D thumbnails through Microsoft's 3D Viewer, which is not part of
+    # Windows 11 any more. So Meshwright browses for itself, and engine.quicklook
+    # draws each file — from a sample, in a fraction of the time opening it costs.
+
+    @_guarded
+    def browse_places(self) -> dict:
+        from engine import browse
+        return {"success": True, **browse.places()}
+
+    @_guarded
+    def browse_folder(self, path: str = "", show_all: bool = False) -> dict:
+        from engine import browse
+        listed = browse.listing(path, show_all)
+        if not listed["error"]:
+            browse.note_folder(listed["path"])
+        return {"success": True, **listed}
+
+    @_guarded
+    def browse_recent(self) -> dict:
+        from engine import browse
+        return {"success": True, "files": browse.recent_files()}
+
+    @_guarded
+    def browse_forget_recent(self) -> dict:
+        from engine import browse
+        browse.forget_all()
+        return {"success": True}
+
+    @_guarded
+    def browse_look(self, path: str, px: int = 0) -> dict:
+        """One file's facts and picture. Slow only the first time: the result is cached."""
+        from engine import quicklook
+        return {"success": True, **quicklook.look(path, px or quicklook.PREVIEW_PX)}
+
+    # ------------------------------------------------------------------ printability
+    @_guarded
+    def list_printers(self) -> dict:
+        return self.svc.printers()
+
+    @_guarded
+    def check_printability(self, printer_id: str = "", technology: str = "", pixel_um: float = 0.0,
+                           nozzle_mm: float = 0.0, layer_mm: float = 0.0,
+                           thorough: bool = False) -> dict:
+        return self.svc.printability(printer_id=printer_id, technology=technology,
+                                     pixel_um=pixel_um, nozzle_mm=nozzle_mm,
+                                     layer_mm=layer_mm, thorough=thorough)
 
     @_guarded
     def detect_comfyui(self) -> dict:
@@ -170,7 +225,11 @@ class AppApi:
     # ------------------------------------------------------------------ operations
     @_guarded
     def load_model_file(self, file_path: str) -> dict:
-        return self.svc.load(file_path)
+        result = self.svc.load(file_path)
+        if result.get("success"):
+            from engine import browse
+            browse.remember(file_path)      # so the browser can offer it again next time
+        return result
 
     @_guarded
     def load_demo_model(self) -> dict:
@@ -322,7 +381,7 @@ class AppApi:
                 libs[name] = version(dist)
             except PackageNotFoundError:
                 libs[name] = None
-        return {"success": True, "version": "1.3.0", "python": platform.python_version(),
+        return {"success": True, "version": __version__, "python": platform.python_version(),
                 "platform": f"{platform.system()} {platform.release()}", "libraries": libs, "three": "r128"}
 
     @_guarded
@@ -393,14 +452,73 @@ def _set_window_icon(title: str, ico_path: str):
         pass
 
 
+def _show_message(title: str, text: str, ask: bool = False) -> bool:
+    """
+    A native message box; with `ask`, a Yes/No one that returns whether Yes was chosen.
+
+    The installed program is a windowed exe with no console, so anything printed is
+    never seen. This is the only way a person finds out why nothing happened.
+    """
+    if os.name != "nt":
+        print(f"{title}\n{text}", flush=True)
+        return False
+    import ctypes
+    MB_YESNO, MB_ICONQUESTION, MB_ICONERROR, IDYES = 0x4, 0x20, 0x10, 6
+    flags = (MB_YESNO | MB_ICONQUESTION) if ask else MB_ICONERROR
+    answer = ctypes.windll.user32.MessageBoxW(None, text, title, flags)
+    return answer == IDYES
+
+
+def _webview2_missing() -> bool:
+    """
+    True when pywebview would fall back to the Internet Explorer engine.
+
+    It never raises for a missing WebView2 runtime. It logs one line and opens a window
+    drawn by MSHTML, which cannot run this interface, so the person gets a broken blank
+    window and no explanation. The choice is made when its `winforms` backend is
+    imported, which `webview.start()` does anyway — doing it a moment earlier lets us
+    say something useful first. If anything about that is unexpected the answer is
+    "no", and start-up carries on exactly as it always did.
+    """
+    if os.name != "nt":
+        return False
+    try:
+        from webview.platforms import winforms
+    except Exception:
+        return False
+    return getattr(winforms, "renderer", None) == "mshtml"
+
+
+def _explain_window_failure(reason: str, detail: str = "") -> None:
+    """Tell the person what is missing and offer to open the page that fixes it."""
+    print(flush=True)
+    print(f"Meshwright could not open its window: {reason}", flush=True)
+    print("Meshwright draws its window with the Microsoft Edge WebView2 runtime.", flush=True)
+    print(f"It is free from Microsoft: {WEBVIEW2_URL}", flush=True)
+    text = (
+        "Meshwright draws its window with the Microsoft Edge WebView2 runtime, and this "
+        "computer does not have a working copy.\n\n"
+        "It is free from Microsoft and already part of Windows 11. Installing it takes under "
+        "a minute, and then Meshwright will start normally.\n\n"
+        + (f"Technical detail: {detail}\n\n" if detail else "")
+        + "Open the download page now?"
+    )
+    if _show_message("Meshwright cannot open its window", text, ask=True):
+        import webbrowser
+        webbrowser.open(WEBVIEW2_URL)
+
+
 def main():
     for stream in (sys.stdout, sys.stderr):
         try:
             stream.reconfigure(encoding="utf-8", errors="replace")
         except Exception:
             pass
+    if _webview2_missing():
+        _explain_window_failure("the WebView2 runtime is not installed")
+        return 1
     api = AppApi()
-    ui_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ui')
+    ui_dir = resource_path('ui')
 
     window = webview.create_window(
         title='Meshwright — Geekatplay Studio',
@@ -441,14 +559,8 @@ def main():
     except Exception as exc:
         # The window itself failed to open — almost always a missing web view
         # runtime rather than anything to do with meshes. Say which.
-        print(flush=True)
-        print(f"Meshwright could not open its window: {exc}", flush=True)
-        print(flush=True)
-        print("On Windows this normally means the Microsoft Edge WebView2 runtime is missing.", flush=True)
-        print("Install the free 'Evergreen Bootstrapper' from:", flush=True)
-        print("  https://developer.microsoft.com/microsoft-edge/webview2/", flush=True)
-        print("then start Meshwright again.", flush=True)
         traceback.print_exc()
+        _explain_window_failure(str(exc), detail=str(exc))
         return 1
     return 0
 

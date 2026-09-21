@@ -4,7 +4,105 @@ All notable changes to Meshwright. Format based on [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-09-21
+
 ### Added
+- **Meshwright checks a model against the printer it is going to.** Pick your machine from the
+  panel — 216 of them, resin and filament, from Elegoo, Anycubic, Phrozen, Creality, Bambu Lab,
+  Prusa and two dozen other makers — and Meshwright measures whether the detail in the model is
+  something that machine can physically make. What is too fine is listed, counted, and can be
+  clicked to light up on the model. Nozzle, pixel pitch and layer height can all be overridden,
+  because a nozzle is a consumable and the owner knows what is fitted.
+
+  It **reports and points; it never changes the model.** What to do about a detail that is too fine
+  has more than one right answer — print it bigger, print it on the other machine, thicken it, or
+  accept the loss — and that is the owner's call. Where detail would be lost, it works out the size
+  at which nothing would be, and says so in millimetres as well as in multiples ("at 8× this size,
+  about 7.9 mm tall, every detail would survive"), which matters because most generated models
+  arrive saved at about a millimetre tall.
+
+  The two numbers that decide are not the same on the two kinds of machine. A resin printer is
+  limited by its screen — an Elegoo Mars 4 Ultra is 153.4 mm across 8520 pixels, so one pixel is
+  18 µm and about two of them is the finest thing it can cure. A filament printer is limited by its
+  nozzle, which cannot lay a line narrower than itself. The same model can therefore be perfect on
+  one and hopeless on the other, and now says which.
+
+  **Nothing is asserted unless two independent measurements agree.** Each layer is sliced and drawn
+  at the printer's own resolution, and morphological opening removes exactly what the machine cannot
+  lay down — that measurement needs no surface normals and no watertight mesh, so it decides.
+  Separately, a ray is fired into the surface at every face to measure the wall there; with Intel
+  Embree behind it that is 336,780 exact measurements in 0.4 s, and on a sphere of known thickness
+  10.000 mm it returns 10.000. But it is only correct while the surface faces the right way, and on
+  one real 694,000-face model with inconsistent winding it read a uniform 0.24 mm wall through a
+  solid figure. So it is never allowed to decide anything alone: on a mesh whose winding or
+  watertightness is in doubt its findings are withheld and the panel says why, and where the two
+  measurements disagree that disagreement is itself reported. A check that quietly guesses is worse
+  than none — it sends someone to a six-hour print.
+
+  The table is embedded, so it works on a PC with no slicer installed; where one *is* installed its
+  machines are offered too, read from its own configuration, because those are the printers that
+  person actually owns. Every figure in the table is a published specification, and any of them can
+  be typed over for a machine that is not listed.
+
+- **Meshwright browses for its own models, and shows you what they are.** **Open model** no longer
+  hands you the Windows dialog, where every 3D file is the same blank icon and the only clue is the
+  filename. It opens Meshwright's own browser: highlight a file and it draws the model, and reports
+  the format, size, triangle count, dimensions, whether it carries textures, and roughly how long it
+  will take to open. Pictures also fill in beside the rows, so a folder can be read at a glance, and
+  the files you opened before are one click away under **Recent**.
+
+  Windows cannot do this itself. It draws 3D thumbnails through Microsoft's 3D Viewer, which is not
+  part of Windows 11 any more; on a normal machine nothing is registered to preview STL, GLB, glTF,
+  PLY, 3MF or OFF, which is why the standard Open box shows a row of identical icons.
+
+  Nothing is loaded to make a picture. Each file is sampled — at most a few hundred thousand
+  triangles read straight out of it — and the sample is splatted into a small depth-and-normal image
+  and lit, so the cost follows the sample rather than the model: a 249 MB, five-million-face STL is
+  drawn in about 0.7 s and a 67 MB GLB in about 0.2 s, against the 7.7 s that actually opening that
+  GLB takes. Pictures are kept in `%LOCALAPPDATA%\Meshwright\previews`, so a folder is instant the
+  second time, and the file's own thumbnail is used when it has one, as slicer-written 3MFs do.
+
+  Numbers are the file's own, or they are marked: an STL's dimensions come from every triangle in
+  it, a glTF's from what it declares, and where a file is too large to measure exactly the size is
+  shown with a `≈`. Formats that cannot be sampled cheaply — FBX above 64 MB, COLLADA, 3DS, a very
+  large 3MF — report their facts and say the picture comes once the model is open.
+
+  It is meant to survive what a real disk holds. A damaged file is explained rather than drawn, and
+  a file that claims more data than it contains is refused instead of read: nothing is
+  memory-mapped, because walking off the end of a mapped file ends the process rather than raising.
+  A folder Windows will not open says so, and is not reported as deleted; a file kept in the cloud
+  by OneDrive is left alone rather than quietly downloaded; drives are read from the list Windows
+  already holds, so a disconnected network drive cannot stall the dialog. Drawing pictures in the
+  background always gives way to whatever you are waiting for, so navigation stays immediate.
+
+  The Windows dialog is still one click away, drag-and-drop is unchanged, and
+  <kbd>Ctrl</kbd>+<kbd>O</kbd> opens the new browser.
+- **A real Windows program and installer.** `packaging\build.ps1` freezes Meshwright into
+  `Meshwright.exe` (PyInstaller) and wraps it in `Meshwright-Setup-<version>.exe` (Inno Setup), so a
+  PC needs no Python, no `install.bat` and no terminal. It installs per user with no administrator
+  prompt, adds Start-menu and desktop shortcuts and a proper uninstaller, and installs Microsoft's
+  WebView2 runtime only if it is missing. See `packaging/README.md`.
+
+  The build proves the result before it ships one. The frozen program carries a `--selftest` that
+  runs 20 checks — the window stack, both helper processes, every mesh engine, texture processing,
+  the file browser's previews, the printer check, three export formats and the MCP server — and `build.ps1` runs it
+  with nothing but Windows on `PATH`, failing the build if anything is wrong. Each step asserts *which* engine did the work,
+  because a packaging failure is quiet: a helper that cannot start does not raise, retopology just
+  uses another engine and returns a perfectly good-looking mesh.
+
+  Two editions: **full**, and **lite**, which leaves out PyMeshLab and pymeshfix (both GPL-3) for
+  anyone who would rather not distribute those. A `THIRD_PARTY_NOTICES.txt` is generated from what
+  was actually bundled, with each licence's text, because MIT and BSD licences require it to travel
+  with a binary.
+- `Meshwright.exe --mcp` runs the MCP server from the installed program, and `--version` and
+  `--selftest` are available from the command line.
+- **A missing WebView2 runtime is now explained.** pywebview does not fail when the runtime is
+  absent: it silently falls back to Internet Explorer's engine, which cannot run the interface, and
+  the person gets a broken blank window and no message. The program now asks pywebview which
+  renderer it chose before opening anything and, if it is the fallback, says what is missing and
+  offers to open the download page. A failed start-up is likewise written to
+  `%LOCALAPPDATA%\Meshwright\startup-error.txt` and shown in a dialog rather than vanishing, since
+  a windowed program has no console to print to.
 - **Reliable model loading progress and global visual feedback.** Selecting or dropping a file now
   immediately activates loading feedback on the client side, rather than waiting for an engine roundtrip.
   A glowing amber-to-cyan progress bar pinned to the top of the 3D viewport animates in synchronization
@@ -40,7 +138,41 @@ All notable changes to Meshwright. Format based on [Keep a Changelog](https://ke
   line. A CSS bob on top runs at its own phase, and two bounces that disagree read as a judder — so
   the layer that used to bob now only leans.
 
+### Changed
+- The version number now lives in one file, `engine/version.py`. The About panel, the MCP server
+  (which had been reporting `1.0.0`) and the installer all read it.
+
 ### Fixed
+- **Models from glTF, GLB and FBX arrived lying on their back.** Meshwright works in Z-up, as every
+  slicer and build plate does, but glTF and GLB *mandate* Y-up in their specification and FBX writes
+  its own answer into the file — and nothing was reading either. A figure generated in ComfyUI or
+  Meshy therefore came in a quarter turn onto its back and stayed that way: its height was reported
+  as its depth, "Unusual scale" measured the wrong side, and "Rest on build plate" stood it on its
+  shoulder. It is now turned upright on the way in, and turned back on the way out, so a GLB written
+  by Meshwright is Y-up as the format requires and opening it again returns the same model rather
+  than one rotated a further quarter turn.
+
+  Only files that *say* which way is up are touched: glTF and GLB always, FBX according to its own
+  header, as read by ufbx. OBJ, PLY, OFF and 3DS record nothing about orientation, and guessing from
+  the shape of a model would stand some up and lay others down with no way to tell those cases
+  apart, so they are left exactly as they are — as are STL and 3MF, which are printing formats and
+  Z-up already. The file browser's previews follow the same rule from the same place
+  (`engine/axes.py`), so a picture is a promise about how the model will actually open.
+- **Decimate and Uniform failed with "Retopology made no change" when MeshLab was missing.** PyMeshLab
+  is optional — the installer carries on without it if it will not install, and the lite edition leaves
+  it out — but nothing told the interface, so choosing either method produced a message that named
+  nothing and suggested nothing. They now say that MeshLab is needed, which copy of Meshwright lacks
+  it, and to use Smart retopology instead. The README had claimed absent engines are "simply not
+  offered"; that was not true and now reads as it is.
+- **The last-resort repair moved and rescaled the model.** When every other engine has failed, repair
+  rebuilds the surface from a solid voxel grid ("Force watertight", on by default). trimesh returns
+  that surface in *voxel index space*, and the result was used as it stood: a 40 mm sphere came back
+  151 units across and centred on (75, 75, 75). It went unnoticed because the only check was that the
+  result was watertight, tried on a one-unit mesh at the origin where the two spaces almost coincide,
+  and because MeshFix nearly always got there first. The result is now mapped back through the grid's
+  own transform, and one that still does not line up with the model is refused, so a repair keeps the
+  mesh it had rather than return one in the wrong place. Found while measuring what the edition
+  without MeshFix costs, where this stage is the main path.
 - **Textures scrambled across half the model, and a load that could run out of memory.**
   Both showed up on the same AI-generated GLB — 694,078 faces in 366 loose shells, with a UV atlas
   made of 13,314 islands — and they were unrelated.

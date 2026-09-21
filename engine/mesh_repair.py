@@ -53,6 +53,40 @@ def _healthy(mesh: trimesh.Trimesh) -> bool:
     return bool(mesh.is_watertight and mesh.is_winding_consistent and mesh.volume > 0)
 
 
+def _voxel_rebuild(mesh: trimesh.Trimesh, pitch: float) -> trimesh.Trimesh:
+    """
+    The mesh's surface rebuilt from a solid voxel grid, in the mesh's own coordinates.
+
+    trimesh's `VoxelGrid.marching_cubes` returns the surface in *voxel index space*, not
+    in the model's: a 40 mm sphere comes back 151 units across and centred on
+    (75, 75, 75). Taken as it stood, this stage silently rescaled and moved whatever it
+    was asked to repair. It went unnoticed because the only check was that the result
+    was watertight, and the mesh it was tried on was a one-unit fin sitting at the origin,
+    where index space and real space are nearly the same thing.
+
+    The grid's own transform maps index space back. It is applied only if the result has
+    not already landed on the model — so a version of trimesh that does it itself is not
+    corrected twice — and a result that still does not line up is refused, so the caller
+    keeps the mesh it had rather than one in the wrong place.
+    """
+    vox = mesh.voxelized(pitch=pitch).fill()
+    rebuilt = vox.marching_cubes
+    if not isinstance(rebuilt, trimesh.Trimesh) or len(rebuilt.faces) == 0:
+        raise ValueError("the voxel grid produced no surface")
+
+    # A rebuilt surface sits on the voxel boundary, up to a cell either side of the original.
+    tolerance = 2.0 * pitch + 0.02 * float(max(mesh.extents))
+
+    def lines_up(candidate):
+        return bool(np.all(np.abs(candidate.bounds - mesh.bounds) <= tolerance))
+
+    if not lines_up(rebuilt):
+        rebuilt.apply_transform(vox.transform)
+    if not lines_up(rebuilt):
+        raise ValueError("the voxel rebuild does not line up with the model, so it was not used")
+    return rebuilt
+
+
 def repair_mesh(mesh: trimesh.Trimesh, strict_watertight: bool = True, voxel_pitch: float = 0.0,
                 log=None, max_passes: int = 3) -> tuple[trimesh.Trimesh, dict]:
     """
@@ -241,9 +275,8 @@ def _repair_pass(mesh: trimesh.Trimesh, strict_watertight: bool, voxel_pitch: fl
             extents = work.extents
             max_extent = float(max(extents)) if len(extents) and max(extents) > 0 else 100.0
             pitch = voxel_pitch if voxel_pitch > 0 else max_extent / 150.0
-            vox = work.voxelized(pitch=pitch).fill()
-            cand = vox.marching_cubes
-            if isinstance(cand, trimesh.Trimesh) and len(cand.faces) > 0:
+            cand = _voxel_rebuild(work, pitch)
+            if len(cand.faces) > 0:
                 cand.fix_normals()
                 work = cand
                 fixes.append({"stage": "Remesh",

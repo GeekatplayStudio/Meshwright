@@ -19,8 +19,9 @@ from mcp.server.mcpserver import MCPServer
 
 from engine.service import MeshService, ServiceError
 from engine.validation import ValidationError
+from engine.version import __version__
 
-mcp = MCPServer("Meshwright", version="1.0.0", instructions=(
+mcp = MCPServer("Meshwright", version=__version__, instructions=(
     "Mesh analysis and repair for 3D printing by Geekatplay Studio. "
     "Load a model, inspect diagnostics, repair, simplify, rotate, remove shells, then export STL. "
     "Every change is a numbered state; undo/redo/revert are available and bad results are rejected automatically."

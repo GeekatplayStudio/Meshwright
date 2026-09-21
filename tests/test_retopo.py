@@ -92,3 +92,40 @@ def test_failing_logger_does_not_abort_retopology():
     m = trimesh.creation.icosphere(subdivisions=4, radius=10)
     r, info = retopologize(m, 500, log=boom)
     assert info["final_faces"] < 900 and r.is_watertight
+
+
+# ------------------------------------------------------------------ a missing engine is explained
+def test_a_method_that_needs_meshlab_says_so_when_meshlab_is_missing(monkeypatch, tmp_path):
+    """
+    PyMeshLab is optional (the installer carries on without it, and the lite edition
+    leaves it out). Picking Decimate used to answer "Retopology made no change", which
+    names nothing and suggests nothing.
+    """
+    import pytest
+
+    import engine.mesh_retopo as retopo
+    from engine.service import ServiceError
+
+    path = str(tmp_path / "ball.stl")
+    trimesh.creation.icosphere(subdivisions=4, radius=20).export(path)
+    svc = MeshService(autosave=False)
+    svc.load(path)
+    monkeypatch.setattr(retopo, "HAS_PYMESHLAB", False)
+
+    for method, label in (("quadric", "Decimate"), ("isotropic", "Uniform")):
+        with pytest.raises(ServiceError) as raised:
+            svc.retopo(500, method=method)
+        text = str(raised.value)
+        assert "MeshLab" in text and label in text, text
+        assert "Smart retopology" in text, "it should say what to do instead"
+
+    # what does not need MeshLab is untouched
+    assert retopo.missing_engine_message("quadriflow") is None
+    assert svc.retopo(500, method="quadriflow")["success"]
+
+
+def test_meshlab_methods_are_not_blocked_when_meshlab_is_present():
+    import engine.mesh_retopo as retopo
+    if retopo.HAS_PYMESHLAB:
+        assert retopo.missing_engine_message("quadric") is None
+        assert retopo.missing_engine_message("isotropic") is None

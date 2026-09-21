@@ -20,12 +20,13 @@ UVs that would smear a texture.
 """
 import os
 import subprocess
-import sys
 import tempfile
 
 import numpy as np
 import trimesh
 from PIL import Image, ImageDraw
+
+from engine.runtime import FROZEN, subprocess_flags, worker_argv
 
 from . import uv_patches as PATCH
 from .uv_channel import seam_edge_count
@@ -76,8 +77,9 @@ def _run_worker(vertices, faces, groups):
     try:
         _pack_input(vertices, faces, groups, in_path)
         try:
-            proc = subprocess.run([sys.executable, _WORKER, in_path, out_path],
-                                  capture_output=True, timeout=UNWRAP_TIMEOUT_S, check=False)
+            proc = subprocess.run(worker_argv("xatlas", _WORKER, in_path, out_path),
+                                  capture_output=True, timeout=UNWRAP_TIMEOUT_S, check=False,
+                                  **subprocess_flags())
         except subprocess.TimeoutExpired:
             raise UnwrapError(
                 f"Unwrapping this model ({len(faces):,} faces) took longer than "
@@ -172,6 +174,11 @@ def unwrap_corner_uv(mesh: trimesh.Trimesh, max_patch_faces: int = PATCH.DEFAULT
     Returns (corner_uv of shape (F, 3, 2), stats).
     """
     if not HAS_XATLAS:
+        if FROZEN:
+            # Nothing to install: the program ships its own copy, so this means the
+            # installation itself is damaged.
+            raise UnwrapError("The UV unwrapper is missing from this copy of Meshwright. "
+                              "Reinstalling Meshwright will restore it.")
         raise UnwrapError("The UV unwrapper (xatlas) is not installed. "
                           "Run install.bat again, or: .venv\\Scripts\\python -m pip install xatlas")
     if len(mesh.faces) == 0:

@@ -1,0 +1,9 @@
+# Meshwright — tools for building the Windows program and installer
+#
+#     .venv\Scripts\python -m pip install -r requirements-build.txt
+#     powershell -File packaging\build.ps1
+#
+# Kept apart from requirements-dev.txt: nobody who is only running the tests
+# needs a freezer, and it is a sizeable install.
+-r requirements.txt
+pyinstaller>=6.10

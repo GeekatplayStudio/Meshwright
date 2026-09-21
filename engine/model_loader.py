@@ -3,6 +3,7 @@ import os
 import numpy as np
 import trimesh
 
+from engine import axes
 from engine.indexing import duplicate_mask
 from engine.texture.companion_detector import (
     decode_fbx_textures,
@@ -79,11 +80,11 @@ def _fan_triangulate(u_mesh) -> np.ndarray:
     return corners
 
 
-def _load_fbx(file_path: str) -> tuple[trimesh.Trimesh | None, dict]:
+def _load_fbx(file_path: str) -> tuple[trimesh.Trimesh | None, dict, str | None]:
     """
     Parse an FBX with ufbx, and get out of the scene's way.
 
-    Returns (mesh, texture sources). Everything ufbx owns stays inside this function:
+    Returns (mesh, texture sources, declared up axis). Everything ufbx owns stays inside this function:
     the mesh is built from copies, and the textures come back as raw bytes or paths
     rather than decoded images.
 
@@ -145,7 +146,14 @@ def _load_fbx(file_path: str) -> tuple[trimesh.Trimesh | None, dict]:
         if all_uvs:
             mesh.visual = trimesh.visual.TextureVisuals(uv=np.vstack(all_uvs))
 
-    return mesh, (fbx_texture_blobs(scene, file_path) if mesh is not None else {})
+    # An FBX states which way is up in its own header; the caller stands the model
+    # up with it. It is read here because only here is the scene still alive, and it
+    # is returned rather than applied so that everything that opens an FBX — the file
+    # browser included — turns it the same way, once.
+    declared = {"POSITIVE_X": "x", "NEGATIVE_X": "x", "POSITIVE_Y": "y", "NEGATIVE_Y": "y",
+                "POSITIVE_Z": "z", "NEGATIVE_Z": "z"}.get(scene.settings.axes.up.name)
+
+    return mesh, (fbx_texture_blobs(scene, file_path) if mesh is not None else {}), declared
 
 
 def load_model(file_path: str, log=None, with_stats: bool = True) -> tuple[trimesh.Trimesh, dict]:
@@ -164,6 +172,7 @@ def load_model(file_path: str, log=None, with_stats: bool = True) -> tuple[trime
     mesh = None
     fbx_maps = {}                       # what the FBX declares on its own materials
     fbx_blobs = {}                      # ...before it has been decoded, see _load_fbx
+    declared_up = None                  # which way the file itself says is up, if it says
     # Every log call in here passes a level, so the stand-in has to accept one too —
     # otherwise load_model() without a logger dies on the first message it writes.
     log = log or (lambda *a, **k: None)
@@ -173,10 +182,10 @@ def load_model(file_path: str, log=None, with_stats: bool = True) -> tuple[trime
     if ext == ".fbx" and HAS_UFBX:
         try:
             log("Parsing FBX with ufbx (fast native)")
-            mesh, fbx_blobs = _load_fbx(file_path)
+            mesh, fbx_blobs, declared_up = _load_fbx(file_path)
         except Exception as e:
             log(f"ufbx parser error: {e}", "warn")
-            mesh, fbx_blobs = None, {}
+            mesh, fbx_blobs, declared_up = None, {}, None
 
         # The scene is out of scope now, and only here is it safe to turn what it
         # declared into images (see _load_fbx). Nothing else in the pipeline would
@@ -220,6 +229,13 @@ def load_model(file_path: str, log=None, with_stats: bool = True) -> tuple[trime
         raise RuntimeError(f"Could not load 3D file '{os.path.basename(file_path)}'. Format extension '{ext}' may be corrupted or unsupported.")
 
     log(f"Geometry: {len(mesh.faces):,} faces, {len(mesh.vertices):,} vertices")
+
+    # Stand the model up if its own format says which way that is. Meshwright works
+    # in Z-up throughout — viewport, build plate, reported height — and glTF, GLB and
+    # FBX do not. See engine/axes.py for why nothing else is touched.
+    if axes.needs_standing_up(ext, declared_up):
+        axes.to_z_up(mesh)
+        log(f"Turned upright: {ext[1:].upper()} files are Y-up, Meshwright works in Z-up")
 
     # Texture data is lifted off the mesh before any welding happens, because both
     # pieces are about to be invalidated by it: UVs move to a per-corner array (which
