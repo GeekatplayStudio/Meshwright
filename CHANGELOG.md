@@ -4,6 +4,57 @@ All notable changes to Meshwright. Format based on [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-09-22
+
+### Added
+- **Right-click a piece and work on that piece.** A model made of separate pieces usually needs
+  different things done to different parts of it — the figure kept and the base thinned, two halves
+  fused into one solid, an arm moved clear of the body before it is printed — and every one of those
+  used to go through the panel on the right, which meant finding the piece in a list instead of
+  pointing at it.
+
+  Right-clicking now opens a menu built around what is under the cursor: **Move**, **Reduce detail**
+  (keep 50%, 25% or 10%), **Merge into one solid**, **Keep only these**, **Remove**, and the
+  selection and view commands. The menu names the pieces it will act on at the top, so the scope of
+  every entry is stated rather than assumed, and right-clicking a piece that is not selected selects
+  it first — acting on something other than the thing you just pointed at is what nobody expects.
+  Shift-right-click adds to the selection, the way shift-click already does.
+
+- **Alt+drag rubber-bands a box over the viewport** and selects every piece inside it; holding Shift
+  as well adds them to what is already chosen rather than replacing it. Picking pieces one at a time
+  is fine for three and hopeless for the three hundred a scan or a generated model routinely splits
+  into.
+
+  A piece counts as caught the moment any one of its points lands in the box — the "touch" rule a
+  modelling program uses — because a band that demanded a whole piece be enclosed would refuse
+  everything on a zoomed-in model, which is when one is most wanted. The search stops at the first
+  point found inside each piece, so the usual case costs almost nothing.
+
+  Alt is what keeps the gesture out of the way: a plain drag still orbits and a plain click still
+  picks, both of which are used far more often. Releasing over nothing says so rather than silently
+  clearing the selection, a band only a few pixels across is treated as a slipped click, and Escape
+  abandons one mid-drag.
+
+- **A drag handle for moving pieces.** **Move** puts a translate gizmo on the selection; dragging
+  shifts those pieces in the viewport and releasing commits the move. The viewport holds one mesh
+  rather than one object per piece, so this shifts the vertices that piece's faces use — safe
+  precisely because a piece is a connected component and shares no vertex with any other. The
+  vertex list is worked out once when the drag begins rather than per frame, which on a
+  half-million-face model is the difference between dragging and watching a slideshow. Escape
+  cancels and puts the model back as it was.
+
+- **Merging is a boolean union, not a concatenation.** Two halves that overlap come out as a single
+  watertight body a slicer can fill. Pieces that do not touch cannot be fused by any amount of
+  arithmetic, and the result says how many separate bodies are left rather than implying a join that
+  is not there.
+
+- **Reducing one piece leaves the others at full detail**, which is what makes it useful for a base
+  or a support block under a figure that must keep every triangle it has.
+
+  A translation changes no topology, so a moved piece keeps the texture coordinates it had instead
+  of having them re-projected onto geometry that has just been dragged somewhere else.
+
+
 ### Added
 - **A file with more than one object in it now asks which ones you want.** Meshwright has always
   opened a model by welding every object in the file into one mesh — right for a figure saved on its

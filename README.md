@@ -9,7 +9,7 @@
 **Mesh analysis, repair, texturing and STL preparation for 3D printing**
 by [Geekatplay Studio](https://www.geekatplay.com) · Vladimir Chopine
 
-[![Version](https://img.shields.io/badge/version-1.5.0-6ea8fe.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.6.0-6ea8fe.svg)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-d9a441.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-3776ab.svg)](https://python.org)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-6ea8fe.svg)](#install)
@@ -44,6 +44,7 @@ Most "mesh repair" tools give you a spinner and a green tick. Meshwright tells y
 | Crash | Work lost | Background snapshots, **recovery offered on next start** |
 | Reduction | One decimation slider | **QuadriFlow smart retopology**, uniform remesh, or quadric collapse — with measured surface deviation |
 | Export | "Here is your STL" | Seven formats, and it **says when the file is not a solid** — the shell that slices with no infill |
+| Multi-part models | One lump, one set of operations | **Right-click any piece** — move it, thin it, fuse it, drop it, on its own |
 | Scene files | Floor and walls welded to your model | **Lists what is in the file and lets you pick**, grouped by your own Blender collections |
 | Will it print? | You find out after six hours | **Checked against your actual printer** — 216 machines, resin and filament — before you slice |
 | Opening a file | A row of identical Windows icons | Meshwright's **own browser, with a picture of every model** and its triangle count |
@@ -171,7 +172,20 @@ Multi-part models are split, colour-coded and listed with triangle counts and si
 <img src="docs/images/12-pieces.png" width="900" alt="Separate pieces colour-coded and selectable">
 </div>
 
-### 7 · Open only the parts you want
+### 7 · Right-click a piece and work on that piece
+
+Multi-part models rarely want the same treatment everywhere. Right-click any piece in the viewport and the menu is built around what is under the cursor — and says which pieces it will act on before you choose anything.
+
+| | |
+|---|---|
+| **Move…** | A drag handle on the selection. Shift a piece clear of the body, space parts across the plate, release to commit. Escape cancels. |
+| **Reduce detail** | Keep 50%, 25% or 10% — of *those pieces only*. A chunky base thins down while the figure above it keeps every triangle. |
+| **Merge into one solid** | A boolean union, not a concatenation: two overlapping halves become one watertight body a slicer can fill. Pieces that do not touch say so rather than pretending to join. |
+| **Keep only these** / **Remove** | Isolate the parts you want, or drop the ones you don't. |
+
+Right-clicking a piece that is not selected selects it first. Shift-right-click adds to the selection, the same as shift-click — and **Alt+drag rubber-bands a box** over the viewport to catch everything inside it at once, which is what makes a model that split into three hundred pieces workable at all. Everything stays in step with the Separate pieces panel, and every action is a numbered state you can undo.
+
+### 8 · Open only the parts you want
 
 A file often holds more than the model. A Blender project lit for rendering brings its studio floor, its reflection cards and the rig's controller widgets; a scene exported to GLB brings whatever else was in it. Meshwright used to weld all of it into one mesh, and afterwards there was no separating it again — in one real project the "model" measured 200 × 200 units because a one-face ground plane was fused to a robot that is 5.4 × 2 × 10.
 
@@ -192,7 +206,7 @@ Listing is deliberately cheap, which is what makes asking practical: a Blender p
 
 **Nothing is guessed at.** Objects the file itself marks as not-for-render start unticked — a rig's controller widgets say so in the file. Everything else starts ticked, because the project that prompted this names its ground plane *"Studio ground • excluded from model validation"* and carries no flag at all to say so, while a genuine floor tile in a printed diorama would look identical to any rule clever enough to catch it. The grouping does that work instead.
 
-### 8 · Print check — will it actually print?
+### 9 · Print check — will it actually print?
 
 Choose the printer this model is going to, and Meshwright measures whether the detail in it is something that machine can physically make. **216 machines** are built in — resin and filament, from Elegoo, Anycubic, Phrozen, Creality, Bambu Lab, Prusa and two dozen other makers — and if you have a slicer installed, its machines are offered too, marked *on this PC*. Nozzle, pixel pitch and layer height can all be typed over, because a nozzle is a consumable and you know what is fitted.
 
@@ -202,13 +216,13 @@ Anything too fine is listed, counted and clickable — it lights up on the model
 
 **Nothing is claimed unless two independent measurements agree.** Every layer is sliced and drawn at the printer's own resolution, and morphological opening removes precisely what the machine cannot lay down; that measurement needs no normals and no watertight mesh, so it is the one that decides. Separately, a ray is fired into the surface at every face to measure the wall there — with Intel Embree behind it, 336,780 exact measurements in 0.4 s, returning 10.000 mm on a sphere of known thickness 10.000 mm. But it is only right while the surface faces the right way: on one real 694,000-face model with inconsistent winding it read a uniform 0.24 mm wall straight through a solid figure. So it never decides alone. On a mesh whose winding or watertightness is in doubt its findings are withheld and the panel says why, and where the two disagree, that disagreement is itself the finding. A printability check that quietly guesses is worse than none — it sends you to a six-hour print.
 
-### 9 · Open a file and see what it is
+### 10 · Open a file and see what it is
 
 Windows draws 3D thumbnails through Microsoft's 3D Viewer, which is no longer part of Windows 11 — so the standard Open dialog shows a row of identical blank icons and a filename to guess from. **Open model** therefore opens Meshwright's own browser instead: highlight a file and it draws the model, and reports the format, size, triangle count, dimensions, whether it carries textures, and roughly how long it will take to open. Pictures fill in beside the rows, so a folder can be read at a glance, and files you opened before are one click away under **Recent**.
 
 Nothing is loaded to make a picture — each file is sampled and lit, so a 249 MB five-million-face STL is drawn in about 0.7 s and a 67 MB GLB in about 0.2 s, against the 7.7 s that opening that GLB actually takes. The Windows dialog is still one click away, and drag-and-drop is unchanged.
 
-### 10 · Nothing is ever lost
+### 11 · Nothing is ever lost
 
 Every change creates a **numbered state**.
 
@@ -218,7 +232,7 @@ Every change creates a **numbered state**.
 - **Revert to original** is explicit, confirmed, and itself undoable.
 - **New** (<kbd>Ctrl</kbd>+<kbd>N</kbd>) or <kbd>Del</kbd> closes the model and empties the workspace, after a confirmation.
 
-### 11 · Always know what it is doing
+### 12 · Always know what it is doing
 
 Long operations announce themselves before they start — how many faces they are about to process and roughly how long it will take — then show a live timer and progress bar in the bottom-right corner, synchronized with a glowing top-of-viewport progress bar and center-screen loading animations. Loading progress stays active throughout file reading, geometry conversion, and WebGL GPU buffer preparation.
 
@@ -234,7 +248,7 @@ Everything also goes to the activity console with timestamps, and to stdout, so 
 <br><em>Every backend step, with timings.</em>
 </div>
 
-### 12 · Someone to wait with
+### 13 · Someone to wait with
 
 Opening a model and writing one out are the two waits worth watching, so that is when
 a small cup strolls along the bottom of the window — and he leaves when the work is
@@ -254,7 +268,7 @@ rubber-hose walk read as drawn rather than as a sprite on rails. He keeps walkin
 as long as the work takes, and if you start something else while he is on his way out
 he turns round from wherever he happens to be standing.
 
-### 13 · Export
+### 14 · Export
 
 STL, OBJ, PLY, OFF, GLB, glTF or 3MF with source-unit scaling (mm / cm / in) and build-plate alignment, plus a **JSON report** of the diagnostics and every operation applied — good for client sign-off or a print-farm audit trail.
 
@@ -290,6 +304,8 @@ It renders on demand rather than continuously, so an idle window costs the GPU n
 | <kbd>Ctrl</kbd>+<kbd>N</kbd> Close model | <kbd>Del</kbd> Remove pieces / close | <kbd>R</kbd> Gizmo | <kbd>F</kbd> Fit |
 | <kbd>W</kbd> Wireframe | <kbd>E</kbd> Open edges | <kbd>G</kbd> Plate | <kbd>1</kbd>–<kbd>7</kbd> Views |
 | <kbd>Ctrl</kbd>+<kbd>`</kbd> Console | <kbd>Esc</kbd> Clear / close | <kbd>?</kbd> Help | |
+
+**In the viewport:** click a piece to select it, <kbd>Shift</kbd>+click to add or remove one, **<kbd>Alt</kbd>+drag** to rubber-band a box over several (<kbd>Shift</kbd> as well to add them to what is already chosen), and **right-click** for what can be done to the selection.
 
 <div align="center">
 <img src="docs/images/09-shortcuts.png" width="820" alt="The keyboard shortcut list, available at any time with ?">

@@ -171,6 +171,9 @@ class ModelViewer {
         let press = null;
         canvas.addEventListener('pointerdown', e => {
             if (e.button !== 0 || e.isPrimary === false) { press = null; return; }
+            // Alt belongs to the area-select drag; a click that begins with it held
+            // is the start of a rubber band, not a pick.
+            if (e.altKey) { press = null; return; }
             if (this.gizmoOn && this.gizmo && (this.gizmo.axis || this.gizmo.dragging)) return;
             press = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: false };
         }, true);
@@ -367,6 +370,161 @@ class ModelViewer {
         }
         this.requestRender();
         return this.gizmoOn;
+    }
+
+    /* Which pieces fall inside a rectangle drawn on screen.
+
+       A piece counts as caught the moment any one of its points lands in the box —
+       the "touch" rule a modelling program uses — because a rubber band that
+       demanded a whole piece be enclosed would refuse everything on a zoomed-in
+       model, which is exactly when one is most wanted.
+
+       The search stops at the first point found inside each piece, so the usual case
+       costs almost nothing; only a drag that catches nothing pays for projecting
+       every vertex. */
+    piecesInBox(left, top, right, bottom) {
+        const found = new Set();
+        if (!this.mesh || !this.shellFaceCounts) return found;
+        const rect = this.renderer.domElement.getBoundingClientRect();
+        if (!rect.width || !rect.height) return found;
+
+        const position = this.mesh.geometry.getAttribute('position');
+        const index = this.mesh.geometry.getIndex().array;
+        this.camera.updateMatrixWorld();
+        this.mesh.updateWorldMatrix(true, false);
+        const world = this.mesh.matrixWorld;
+        const point = new THREE.Vector3();
+
+        let face = 0;
+        this.shellFaceCounts.forEach((count, piece) => {
+            const end = face + count;
+            for (let f = face; f < end && !found.has(piece); f++) {
+                for (let corner = 0; corner < 3; corner++) {
+                    const v = index[f * 3 + corner];
+                    point.set(position.getX(v), position.getY(v), position.getZ(v))
+                        .applyMatrix4(world).project(this.camera);
+                    // Behind the camera, projection folds a point back into view.
+                    if (point.z < -1 || point.z > 1) continue;
+                    const x = rect.left + (point.x * 0.5 + 0.5) * rect.width;
+                    const y = rect.top + (-point.y * 0.5 + 0.5) * rect.height;
+                    if (x >= left && x <= right && y >= top && y <= bottom) {
+                        found.add(piece);
+                        break;
+                    }
+                }
+            }
+            face = end;
+        });
+        return found;
+    }
+
+
+    /* ---------- moving chosen pieces ----------
+       The viewport holds one mesh, not one object per piece, so a piece is a run of
+       faces inside it. Moving one therefore means shifting the vertices those faces
+       use — which is safe precisely because a piece is a connected component and
+       shares no vertex with any other.
+
+       The vertex list is worked out once when the drag begins, not per frame: on a
+       half-million-face model, walking the index buffer sixty times a second is the
+       difference between dragging and watching a slideshow. */
+    verticesOfPieces(selected) {
+        if (!this.mesh || !this.shellFaceCounts) return [];
+        const index = this.mesh.geometry.getIndex().array;
+        const wanted = new Set();
+        let face = 0;
+        this.shellFaceCounts.forEach((count, piece) => {
+            if (selected.has(piece)) {
+                for (let f = face; f < face + count; f++) {
+                    wanted.add(index[f * 3]);
+                    wanted.add(index[f * 3 + 1]);
+                    wanted.add(index[f * 3 + 2]);
+                }
+            }
+            face += count;
+        });
+        return Array.from(wanted);
+    }
+
+    /* Where the chosen pieces sit, in viewer space — where the handle belongs. */
+    centreOfPieces(selected) {
+        const vertices = this.verticesOfPieces(selected);
+        const position = this.mesh && this.mesh.geometry.getAttribute('position');
+        if (!vertices.length || !position) return null;
+        const low = new THREE.Vector3(Infinity, Infinity, Infinity);
+        const high = new THREE.Vector3(-Infinity, -Infinity, -Infinity);
+        for (const v of vertices) {
+            low.min(new THREE.Vector3(position.getX(v), position.getY(v), position.getZ(v)));
+            high.max(new THREE.Vector3(position.getX(v), position.getY(v), position.getZ(v)));
+        }
+        return low.add(high).multiplyScalar(0.5);
+    }
+
+    /* Put a drag handle on the chosen pieces. `onMoved` is called once, on release,
+       with the total shift in model (Z-up) space, so the engine is told the answer
+       rather than every step of the way. */
+    beginMove(selected, onMoved) {
+        this.endMove();
+        const centre = this.centreOfPieces(selected);
+        if (!centre) return false;
+
+        this.moveVerts = this.verticesOfPieces(selected);
+        this.moveHandle = new THREE.Object3D();
+        this.moveHandle.position.copy(centre);
+        this.scene.add(this.moveHandle);
+        this.moveFrom = centre.clone();
+        this.moveLast = centre.clone();
+
+        if (!this.mover) {
+            this.mover = new THREE.TransformControls(this.camera, this.renderer.domElement);
+            this.mover.setMode('translate');
+            this.mover.setSpace('world');
+            this.mover.addEventListener('change', () => this.requestRender());
+            this.mover.addEventListener('dragging-changed', e => { this.controls.enabled = !e.value; });
+            this.mover.addEventListener('objectChange', () => this.dragPieces());
+            this.mover.addEventListener('mouseUp', () => {
+                const shift = this.moveHandle.position.clone().sub(this.moveFrom);
+                // viewer (Y-up) back to model (Z-up): the geometry was turned a
+                // quarter turn about X on the way in, so the shift turns back.
+                if (this.onPieceMove) {
+                    this.onPieceMove([shift.x, -shift.z, shift.y]);
+                }
+            });
+            this.scene.add(this.mover);
+        }
+        this.onPieceMove = onMoved;
+        this.mover.attach(this.moveHandle);
+        this.mover.size = 0.7;
+        this.requestRender();
+        return true;
+    }
+
+    dragPieces() {
+        if (!this.moveHandle || !this.moveVerts || !this.mesh) return;
+        const step = this.moveHandle.position.clone().sub(this.moveLast);
+        if (step.lengthSq() === 0) return;
+        this.moveLast.copy(this.moveHandle.position);
+        const position = this.mesh.geometry.getAttribute('position');
+        for (const v of this.moveVerts) {
+            position.setXYZ(v, position.getX(v) + step.x,
+                            position.getY(v) + step.y, position.getZ(v) + step.z);
+        }
+        position.needsUpdate = true;
+        this.mesh.geometry.computeBoundingSphere();
+        // The open-edge overlay and the wireframe are built from the geometry as it
+        // was; they catch up when the move is committed and the preview is rebuilt.
+        this.requestRender();
+    }
+
+    endMove() {
+        if (this.mover) this.mover.detach();
+        if (this.moveHandle) {
+            this.scene.remove(this.moveHandle);
+            this.moveHandle = null;
+        }
+        this.moveVerts = null;
+        this.onPieceMove = null;
+        this.requestRender();
     }
 
     /* Rotate instantly about the model centre; axis is in model (Z-up) space. */

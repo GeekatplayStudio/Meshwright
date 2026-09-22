@@ -473,6 +473,135 @@ class MeshService(TextureServiceMixin):
             mesh = trimesh.util.concatenate(keep) if len(keep) > 1 else keep[0].copy()
             return self._commit(mesh, "remove_shells", {"removed": drop, "faces_removed": removed}, guard=False)
 
+    # ------------------------------------------------------------------ working on chosen pieces
+    #
+    # A model made of separate pieces is usually a model that needs different things
+    # done to different parts of it: the figure kept and the base thinned, two halves
+    # fused into one solid, an arm moved clear of the body before printing. These all
+    # take the same shape — take the pieces apart, do something to the chosen ones,
+    # put them back — so they share one helper and differ only in that middle step.
+
+    def _chosen(self, indices, what: str):
+        """(state, sorted chosen indices, the rest) — or a refusal that names the reason."""
+        st = self._require()
+        if not st.shells:
+            raise ServiceError(f"This model is a single piece, so there is nothing to {what}.")
+        picked = sorted(set(V.index_list(indices, "indices", len(st.shells))))
+        if not picked:
+            raise ServiceError(f"No pieces were selected to {what}.")
+        others = [s for i, s in enumerate(st.shells) if i not in set(picked)]
+        return st, picked, others
+
+    def _piece_vertices(self, st, picked):
+        """
+        Which vertices belong to the chosen pieces.
+
+        The mesh is the pieces concatenated in order, so each one owns a contiguous
+        run of faces; and because a piece is a connected component, no vertex is
+        shared with another. That makes a straight translation safe to apply in
+        place — which matters, because doing it in place is what lets the texture
+        coordinates come through untouched instead of being re-projected onto
+        geometry that has just moved.
+        """
+        counts = [len(s.faces) for s in st.shells]
+        starts = np.concatenate([[0], np.cumsum(counts)])
+        rows = np.concatenate([np.arange(starts[i], starts[i + 1], dtype=np.int64)
+                               for i in picked]) if picked else np.zeros(0, np.int64)
+        return np.unique(np.asarray(st.mesh.faces, np.int64)[rows])
+
+    def move_pieces(self, indices, offset) -> dict:
+        """Shift the chosen pieces bodily. Geometry moves; nothing else changes."""
+        with self.lock:
+            st, picked, _ = self._chosen(indices, "move")
+            shift = np.asarray([V.number(v, "offset", -1e6, 1e6, 0.0) for v in list(offset)[:3]], float)
+            if shift.shape != (3,):
+                raise ServiceError("A move needs three numbers: x, y and z.")
+            if np.allclose(shift, 0):
+                return {"success": True, "unchanged": True, "state_id": st.id}
+
+            mesh = st.mesh.copy()
+            vertices = self._piece_vertices(st, picked)
+            mesh.vertices[vertices] += shift
+            self.log(f"Moved {len(picked)} piece(s) by "
+                     f"({shift[0]:.2f}, {shift[1]:.2f}, {shift[2]:.2f}) mm")
+            # Topology, face order and vertex count are all untouched, so the UV
+            # channel belongs to this mesh exactly as it stands.
+            return self._commit(mesh, "move_pieces",
+                                {"moved": picked, "offset": [round(float(v), 4) for v in shift]},
+                                guard=False, uv=st.uv)
+
+    def merge_pieces(self, indices) -> dict:
+        """
+        Fuse the chosen pieces into one solid where they touch.
+
+        A boolean union, not a concatenation: two halves that overlap come out as a
+        single watertight body a slicer can fill. Pieces that do not touch cannot be
+        fused by any amount of arithmetic, and the result says so rather than
+        implying a join that is not there.
+        """
+        with self.lock:
+            st, picked, others = self._chosen(indices, "merge")
+            if len(picked) < 2:
+                raise ServiceError("Merging needs at least two pieces.")
+            parts = [st.shells[i].copy() for i in picked]
+            before = sum(len(p.faces) for p in parts)
+            with self._job("merge_pieces", f"Merging {len(picked)} pieces", faces=before):
+                try:
+                    fused = trimesh.boolean.union(parts)
+                except Exception as exc:
+                    raise ServiceError(
+                        "These pieces could not be fused — a boolean union needs each of them to "
+                        f"be a closed solid. Repair the model first, then try again. ({exc})")
+            if fused is None or not len(fused.faces):
+                raise ServiceError("Merging produced nothing; the pieces may not be closed solids.")
+            try:
+                bodies = int(fused.body_count)
+            except Exception:
+                bodies = 1
+            if bodies > 1:
+                self.log(f"{len(picked)} pieces are now one object, but {bodies} of them do not "
+                         "touch, so they remain separate bodies", "warn")
+            else:
+                self.log(f"{len(picked)} pieces fused into one solid", "ok")
+            mesh = trimesh.util.concatenate([fused] + others) if others else fused
+            return self._commit(mesh, "merge_pieces",
+                                {"merged": picked, "bodies_after": bodies,
+                                 "faces_before": before, "faces_after": int(len(fused.faces))},
+                                guard=False)
+
+    def optimize_pieces(self, indices, keep_fraction: float = 0.5) -> dict:
+        """Reduce only the chosen pieces, leaving the rest at full detail."""
+        with self.lock:
+            st, picked, _ = self._chosen(indices, "reduce")
+            keep = V.number(keep_fraction, "keep_fraction", 0.01, 0.99, 0.5)
+            before = sum(len(st.shells[i].faces) for i in picked)
+            with self._job("simplify", f"Reducing {len(picked)} piece(s)", faces=before):
+                rebuilt, after = [], 0
+                for index, shell in enumerate(st.shells):
+                    if index not in set(picked):
+                        rebuilt.append(shell)
+                        continue
+                    reduced, _info = reduce_mesh(shell.copy(), target_factor=keep, log=self.log)
+                    rebuilt.append(reduced)
+                    after += len(reduced.faces)
+            mesh = trimesh.util.concatenate(rebuilt) if len(rebuilt) > 1 else rebuilt[0]
+            self.log(f"{before:,} → {after:,} faces across {len(picked)} piece(s); "
+                     "the rest of the model is untouched", "ok")
+            res = self._commit(mesh, "optimize_pieces",
+                               {"pieces": picked, "faces_before": before, "faces_after": after},
+                               guard=False)
+            res["info"] = {"pieces": len(picked), "faces_before": before, "faces_after": after}
+            return res
+
+    def isolate_pieces(self, indices) -> dict:
+        """Keep only the chosen pieces — the inverse of removing them."""
+        with self.lock:
+            st, picked, _ = self._chosen(indices, "isolate")
+            if len(picked) == len(st.shells):
+                return {"success": True, "unchanged": True, "state_id": st.id}
+            dropped = [i for i in range(len(st.shells)) if i not in set(picked)]
+            return self.remove_shells(dropped)
+
     def rotate(self, matrix) -> dict:
         """Bake a model-space rotation about the bbox centre. Returns stats + exact bounds (no geometry)."""
         with self.lock:

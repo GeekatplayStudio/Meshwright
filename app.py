@@ -224,6 +224,23 @@ class AppApi:
         return res
 
     # ------------------------------------------------------------------ operations
+    # ------------------------------------------------------------------ chosen pieces
+    @_guarded
+    def move_pieces(self, indices, offset) -> dict:
+        return self.svc.move_pieces(indices, offset)
+
+    @_guarded
+    def merge_pieces(self, indices) -> dict:
+        return self.svc.merge_pieces(indices)
+
+    @_guarded
+    def optimize_pieces(self, indices, keep_fraction: float = 0.5) -> dict:
+        return self.svc.optimize_pieces(indices, keep_fraction)
+
+    @_guarded
+    def isolate_pieces(self, indices) -> dict:
+        return self.svc.isolate_pieces(indices)
+
     @_guarded
     def inspect_model_parts(self, file_path: str) -> dict:
         """What a file holds, so the interface can ask before opening all of it."""

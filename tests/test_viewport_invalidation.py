@@ -38,6 +38,9 @@ EXEMPT = {
     "initPiecePicking",  # registers input handlers; showShells invalidates after selection
     "pieceAt",       # ray query; updating world matrices does not change the scene
     "updateLight",   # helper; every caller invalidates, and it does too
+    "piecesInBox",   # ray-free screen query; updating world matrices changes no pixel
+    "verticesOfPieces",  # pure read: walks the index buffer, changes nothing
+    "centreOfPieces",    # pure read: measures the chosen pieces
 }
 
 

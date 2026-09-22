@@ -671,3 +671,50 @@ body.working { cursor: progress; }
 .parts-meta { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .parts-foot { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
 .parts-foot .btn.small { height: 28px; padding: 0 12px; }
+
+/* ------------------------------------------------------ Right-click on the model
+   Acts on the pieces named in its own heading, so the scope of every entry is
+   stated rather than assumed. */
+.ctx-menu {
+    position: fixed; z-index: 120; min-width: 212px; padding: 5px;
+    background: var(--bg-2); border: 1px solid var(--line); border-radius: 9px;
+    box-shadow: 0 12px 34px -10px rgba(0,0,0,.7), 0 2px 6px rgba(0,0,0,.35);
+    font-size: 13px; user-select: none;
+}
+.ctx-title {
+    padding: 7px 10px 8px; margin-bottom: 4px; border-bottom: 1px solid var(--line);
+    color: var(--accent-2); font-size: 11px; letter-spacing: .04em; text-transform: uppercase;
+    font-variant-numeric: tabular-nums;
+}
+.ctx-item {
+    position: relative; display: flex; align-items: center; gap: 12px; width: 100%;
+    background: none; border: 0; color: var(--text); font: inherit; text-align: left;
+    padding: 7px 10px; border-radius: 6px; cursor: pointer;
+}
+.ctx-item > span:first-child { flex: 1; white-space: nowrap; }
+.ctx-item:hover { background: var(--bg-3); }
+.ctx-item.danger:hover { background: rgba(229,83,75,.16); color: var(--bad); }
+.ctx-hint { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.ctx-arrow { color: var(--muted); font-size: 15px; line-height: 1; }
+.ctx-sep { height: 1px; margin: 5px 4px; background: var(--line); }
+.ctx-sub {
+    position: absolute; left: 100%; top: -5px; margin-left: 2px; min-width: 132px; padding: 5px;
+    background: var(--bg-2); border: 1px solid var(--line); border-radius: 9px;
+    box-shadow: 0 12px 34px -10px rgba(0,0,0,.7); display: none;
+}
+.ctx-item.has-sub:hover > .ctx-sub { display: block; }
+
+/* ------------------------------------------------------- Alt-drag area select
+   Drawn over the viewport rather than in the scene, so it stays one pixel wide at
+   any zoom and costs the renderer nothing while it is dragged. */
+.marquee {
+    position: absolute; z-index: 40; pointer-events: none;
+    border: 1px dashed var(--accent-2);
+    background: rgba(217, 164, 65, .10);
+    border-radius: 2px;
+}
+.marquee-count {
+    position: absolute; left: 0; bottom: 100%; margin-bottom: 4px;
+    color: var(--accent-2); font-size: 11px; font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}

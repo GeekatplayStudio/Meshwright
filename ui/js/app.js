@@ -412,6 +412,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /* ---------- shells ---------- */
     let shellSelection = new Set();
+    // renderShells builds its own sync function each time; these keep a handle on
+    // the current one so the right-click menu can drive the same selection the
+    // Separate pieces panel does, instead of a second one that disagrees with it.
+    let syncShells = () => {};
+    let shellList = [];
     let shellHighlight = true;
 
     /* Piece colours and a shading mode cannot both be on the mesh — the shell overlay
@@ -450,6 +455,8 @@ document.addEventListener('DOMContentLoaded', () => {
             $('btnShellsAll').textContent = shellSelection.size === shells.length ? 'Select none' : 'Select all';
             if (shellHighlight) window.viewer.showShells(shellSelection);
         };
+        syncShells = syncShellButtons;
+        shellList = shells;
         window.viewer.onPiecePick = (piece, toggle) => {
             shellSelection = window.viewer.constructor.pickSelection(shellSelection, piece, toggle);
             if (piece !== null) {
@@ -630,7 +637,8 @@ document.addEventListener('DOMContentLoaded', () => {
         ['Ctrl+O', 'Open model'], ['Ctrl+S', 'Export model'], ['Ctrl+Shift+S', 'Save JSON report'],
         ['Ctrl+Z', 'Undo'], ['Ctrl+Y / Ctrl+Shift+Z', 'Redo'], ['Ctrl+R', 'Repair mesh'], ['Ctrl+U', 'Re-analyse'],
         ['Click', 'Select a piece'], ['Shift+click', 'Add or remove a piece'],
-        ['Ctrl+A', 'Select all pieces'], ['Delete', 'Remove selected pieces'], ['R', 'Rotation gizmo'],
+        ['Ctrl+A', 'Select all pieces'], ['Alt+drag', 'Select pieces inside a box'],
+        ['Shift+click', 'Add or remove a piece'], ['Right-click', 'What can be done to this piece'], ['Delete', 'Remove selected pieces'], ['R', 'Rotation gizmo'],
         ['F', 'Fit view'], ['W', 'Wireframe'], ['E', 'Open-edge highlight'], ['G', 'Build plate'],
         ['1 – 7', 'Top · Front · Right · Iso · Bottom · Back · Left'], ['Esc', 'Clear highlight / close dialog'],
         ['Ctrl+`', 'Console'], ['Ctrl+N', 'Close model / start over'],
@@ -1083,6 +1091,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // which calls window.meshwright.load(path).
     window.meshwright = {
         load: loadFile, log: logLine, offerRecovery, progress: onProgress, toast, showModel,
+        setStatus,
+        // Redraw the viewport from what the engine actually holds. Used after a
+        // cancelled piece drag, where the buffer on screen was nudged about and no
+        // longer matches the model.
+        refreshViewport: () => applyDetail(detailSlider ? +detailSlider.value : 100),
+        pieces: {
+            selected: () => new Set(shellSelection),
+            all: () => shellList.map(sh => sh.index),
+            info: index => shellList.find(sh => sh.index === index) || null,
+            choose: (ids, highlight = true) => {
+                shellSelection = new Set(ids);
+                if (highlight) {
+                    shellHighlight = true;
+                    $('btnShellsHighlight').classList.add('active');
+                }
+                syncShells();
+            },
+        },
         confirm: (title, bodyHtml, confirmLabel, onConfirm) => openModal(title, bodyHtml,
             [{ label: 'Cancel' }, { label: confirmLabel, primary: true, action: onConfirm }]),
     };
