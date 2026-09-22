@@ -864,6 +864,16 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadFile(path) {
         if (!api()) { setStatus('Desktop bridge not available', 'error', 4000); return; }
         const name = path.split(/[\\/]/).pop();
+
+        // A file holding more than one object is asked about before anything is
+        // welded together; a Blender scene arrives with its studio floor otherwise.
+        let keep = null;
+        if (window.meshwrightParts) {
+            const chosen = await window.meshwrightParts.choose(path);
+            if (chosen === false) { setStatus('Cancelled', 'ok', 2000); return; }
+            keep = chosen;
+        }
+
         setStatus(`Loading ${name}…`);
         openConsole(true);
         $('report').classList.add('hidden');
@@ -878,7 +888,7 @@ document.addEventListener('DOMContentLoaded', () => {
             eta_text: 'reading model…'
         });
         try {
-            const res = await api().load_model_file(path);
+            const res = await api().load_model_file(path, keep);
             if (!res.success) {
                 isModelLoading = false;
                 onProgress({ state: 'error', operation: 'load', label: `Failed loading ${name}`, error: res.error });

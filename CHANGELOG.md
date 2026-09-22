@@ -4,6 +4,39 @@ All notable changes to Meshwright. Format based on [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+### Added
+- **A file with more than one object in it now asks which ones you want.** Meshwright has always
+  opened a model by welding every object in the file into one mesh — right for a figure saved on its
+  own, wrong for anything that was set up for rendering. A Blender project arrives with its studio
+  floor and its reflection cards fused to the model, and no amount of work afterwards can separate
+  them again.
+
+  Opening such a file now lists what is in it first — name, triangle count and size, grouped by the
+  collections the author made — and only what you keep is welded. In one real project that is 108
+  objects in six groups, and the studio goes away in a single click.
+
+  Listing is deliberately cheap, which is what makes asking practical: a Blender project is read in
+  under two seconds where exporting it takes minutes, and a glTF is read from its own header, so a
+  426 MB file is listed without touching the 426 MB.
+
+  **Nothing is guessed at.** Objects the file itself marks as not-for-render start unticked — a rig's
+  controller widgets say so in the file — and everything else starts ticked. That restraint is the
+  point: the project that prompted this names its 200 x 200 ground plane "Studio ground - excluded
+  from model validation" and carries no flag at all to say so, while a genuine floor tile in a
+  printed diorama would look identical to any rule that tried to be clever. The grouping does the
+  work instead.
+
+  A file that holds one object is opened as before, with no question asked. A choice that cannot be
+  honoured now fails and says so, rather than falling through to a loader that cannot filter and
+  quietly handing back the whole scene — which would have been the one failure nobody would notice.
+
+### Changed
+- **Blender projects no longer import what Blender itself would not render.** The export now passes
+  `use_visible` and `use_renderable`, so a rig's controller widgets and anything switched off in the
+  outliner stay behind. This is the half of the problem the file answers on its own; the other half
+  is the picker above.
+
+
 ## [1.5.0] - 2026-09-21
 
 ### Added

@@ -156,7 +156,8 @@ def _load_fbx(file_path: str) -> tuple[trimesh.Trimesh | None, dict, str | None]
     return mesh, (fbx_texture_blobs(scene, file_path) if mesh is not None else {}), declared
 
 
-def load_model(file_path: str, log=None, with_stats: bool = True) -> tuple[trimesh.Trimesh, dict]:
+def load_model(file_path: str, log=None, with_stats: bool = True,
+               keep=None) -> tuple[trimesh.Trimesh, dict]:
     """
     Loads any 3D model (BLEND, OBJ, FBX, GLB, GLTF, STL, PLY, 3DS, DAE, 3MF, OFF, etc.)
     and returns a normalized trimesh.Trimesh object along with metadata statistics.
@@ -183,7 +184,7 @@ def load_model(file_path: str, log=None, with_stats: bool = True) -> tuple[trime
 
         # The intermediate GLB has already passed through normalization and UV
         # extraction. Keep that metadata and report the original project name.
-        mesh = load_blend(file_path, log)
+        mesh = load_blend(file_path, log, keep=keep)
         return mesh, get_mesh_stats(mesh, file_path) if with_stats else {}
 
     # Strategy 1: For FBX files, use fast native ufbx parser with full UV support
@@ -201,6 +202,16 @@ def load_model(file_path: str, log=None, with_stats: bool = True) -> tuple[trime
         # artwork has no companion images beside it for the folder scan to find.
         if fbx_blobs:
             fbx_maps = decode_fbx_textures(fbx_blobs, log)
+
+    # Only the objects the person kept, each still where the file put it.
+    #
+    # Deliberately outside the fallback chain below: a chosen set that cannot be
+    # honoured has to fail and say so. Letting it fall through to the loaders that
+    # cannot filter would quietly hand back the whole scene — the studio floor and
+    # all — which is the exact thing the choosing was for.
+    if mesh is None and keep is not None:
+        from engine.scene_parts import assemble
+        mesh = assemble(file_path, keep)
 
     # Strategy 2: Standard Trimesh loader (handles STL, OBJ, GLB, GLTF, PLY, 3MF, DAE, OFF, etc.)
     if mesh is None:

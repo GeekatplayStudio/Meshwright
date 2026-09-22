@@ -382,6 +382,22 @@
     </div>
 </div>
 
+<div class="modal hidden" id="parts">
+    <div class="modal-card parts-card">
+        <button class="about-close" id="btnPartsClose" title="Close (Esc)">&times;</button>
+        <h2 id="partsTitle">This file holds several objects</h2>
+        <p class="hint" id="partsHint">Choose what to open.</p>
+        <div class="parts-list" id="partsList"></div>
+        <div class="parts-foot">
+            <button id="btnPartsAll" class="btn small">Select all</button>
+            <span class="muted" id="partsCount"></span>
+            <span class="browser-spacer"></span>
+            <button id="btnPartsCancel" class="btn">Cancel</button>
+            <button id="btnPartsOpen" class="btn btn-primary">Open these</button>
+        </div>
+    </div>
+</div>
+
 <div class="modal hidden" id="browser">
     <div class="modal-card browser-card">
         <div class="browser-head">
@@ -445,6 +461,7 @@
 <script src="js/app.js"></script>
 <script src="js/texture_ui.js"></script>
 <script src="js/printer.js"></script>
+<script src="js/parts.js"></script>
 <script src="js/walker.js"></script>
 </body>
 </html>

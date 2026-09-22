@@ -225,8 +225,13 @@ class AppApi:
 
     # ------------------------------------------------------------------ operations
     @_guarded
-    def load_model_file(self, file_path: str) -> dict:
-        result = self.svc.load(file_path)
+    def inspect_model_parts(self, file_path: str) -> dict:
+        """What a file holds, so the interface can ask before opening all of it."""
+        return self.svc.inspect_parts(file_path)
+
+    @_guarded
+    def load_model_file(self, file_path: str, keep=None) -> dict:
+        result = self.svc.load(file_path, keep=keep)
         if result.get("success"):
             from engine import browse
             browse.remember(file_path)      # so the browser can offer it again next time

@@ -289,16 +289,31 @@ class MeshService(TextureServiceMixin):
         return out
 
     # ================================================================ operations
-    def load(self, path: str) -> dict:
+    def inspect_parts(self, path: str) -> dict:
+        """
+        What is in a file, before opening it. Changes nothing and keeps no state.
+
+        Cheap by design — a Blender project is listed in under two seconds where
+        exporting it takes minutes, and a glTF is read from its header without
+        touching its geometry — so it is affordable to ask before committing.
+        """
+        from engine.scene_parts import list_parts
+        return {"success": True, **list_parts(V.input_path(path), log=self.log)}
+
+    def load(self, path: str, keep=None) -> dict:
         with self.lock:
             p = V.input_path(path)
+            if keep is not None:
+                keep = [str(name) for name in keep][:5000]
+                if not keep:
+                    raise ServiceError("No objects were chosen, so there is nothing to open.")
             size_mb = os.path.getsize(p) / 1e6
             self.progress(state="start", operation="load", label=f"Loading {os.path.basename(p)}",
                           faces=0, eta=round(2 + size_mb * 0.25, 1),
                           eta_text=describe_duration(2 + size_mb * 0.25))
             self.log(f"Opening {p} ({size_mb:.1f} MB)")
             t0 = time.perf_counter()
-            mesh, _ = load_model(p, log=self.log, with_stats=False)
+            mesh, _ = load_model(p, log=self.log, with_stats=False, keep=keep)
             corner_uv = mesh.metadata.pop("corner_uv", None)
             self.file_path = p
             self._states.clear()

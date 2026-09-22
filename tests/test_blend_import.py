@@ -31,14 +31,16 @@ def test_conversion_failures_are_actionable_and_cleaned_up(tmp_path, monkeypatch
     folders = []
 
     def run(command, **kwargs):
-        folders.append(Path(command[-1]).parent)
+        # The script Blender is handed always sits in the temporary folder, whatever
+        # arguments follow it — so that is what to watch for cleanup.
+        folders.append(Path(command[command.index("--python") + 1]).parent)
         assert command.index("--disable-autoexec") < command.index("--python")
         if failure == "timeout":
             raise subprocess.TimeoutExpired(command, 300)
         return subprocess.CompletedProcess(command, int(failure == "failed"), "bad project", "")
 
     monkeypatch.setattr(blend_import.subprocess, "run", run)
-    with pytest.raises(RuntimeError, match="timed out|could not import"):
+    with pytest.raises(RuntimeError, match="took too long|could not open|exported no geometry"):
         load_model(str(source))
     assert all(not folder.exists() for folder in folders)
 

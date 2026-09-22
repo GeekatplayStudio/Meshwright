@@ -650,3 +650,24 @@ body.working { cursor: progress; }
 .print-advice { margin-top: 8px; border-left: 2px solid var(--accent); padding-left: 8px; }
 .print-doubt { margin-top: 10px; padding: 8px 10px; border-radius: 6px; background: var(--bg); border-left: 3px solid var(--warn); color: var(--muted); font-size: 12px; line-height: 1.5; }
 .print-doubt strong { color: var(--warn); }
+
+/* ------------------------------------------------- What is in this file
+   The import picker. Grouped by the collections the author made, because a
+   Blender scene can hold a hundred objects and six groups is a readable list. */
+.parts-card { width: 640px; max-width: 94vw; display: flex; flex-direction: column; max-height: 82vh; }
+.parts-card h2 { font-size: 15px; font-weight: 600; padding-right: 28px; }
+.parts-card .hint { margin: 4px 0 12px; line-height: 1.5; }
+.parts-list { flex: 1; overflow-y: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); padding: 6px; min-height: 120px; }
+.parts-group { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 8px 6px; margin-top: 4px; border-top: 1px solid var(--line); }
+.parts-group:first-child { border-top: 0; margin-top: 0; }
+.parts-group .check span { font-weight: 600; }
+.parts-group-meta { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.parts-rows { display: flex; flex-direction: column; }
+.parts-row { display: grid; grid-template-columns: 18px 1fr auto; align-items: center; gap: 9px; padding: 4px 8px; border-radius: 5px; cursor: pointer; }
+.parts-row:hover { background: var(--bg-3); }
+.parts-row input { accent-color: var(--accent); width: 14px; height: 14px; }
+.parts-row.off .parts-name, .parts-row.off .parts-meta { opacity: .45; }
+.parts-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.parts-meta { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.parts-foot { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+.parts-foot .btn.small { height: 28px; padding: 0 12px; }
