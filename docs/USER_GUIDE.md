@@ -3,7 +3,9 @@
 ## Opening a model
 
 Drag a file onto the window, or press <kbd>Ctrl</kbd>+<kbd>O</kbd>.
-Supported: **OBJ, FBX, GLB, GLTF, STL, PLY, 3MF, DAE, OFF, 3DS**.
+For `.blend` files, install Blender or set `MESHWRIGHT_BLENDER` to its executable. The active scene is imported with modifiers and glTF-compatible materials.
+
+Supported: **BLEND, OBJ, FBX, GLB, GLTF, STL, PLY, 3MF, DAE, OFF, 3DS**.
 
 Meshwright ships no 3D models — it is a workshop for files you already have, so nothing has to be
 downloaded and no model folder has to be configured. To try it without a file of your own, click
@@ -49,6 +51,8 @@ If a repair would make things worse, Meshwright refuses it, keeps your previous 
 **Apply anyway**. That is deliberate — see [Safety](#safety).
 
 ## Separate pieces
+
+Click a piece in the viewport to select it. **Shift-click** toggles pieces in the selection; click empty space to clear it. Selected pieces turn red and the list updates automatically. Drag to orbit as usual.
 
 When a model contains several disconnected pieces they are colour-coded in the viewport and listed
 with triangle counts and sizes. Tick the ones you want gone — they turn red — then **Remove selected**

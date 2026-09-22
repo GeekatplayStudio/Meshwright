@@ -158,7 +158,7 @@ def _load_fbx(file_path: str) -> tuple[trimesh.Trimesh | None, dict, str | None]
 
 def load_model(file_path: str, log=None, with_stats: bool = True) -> tuple[trimesh.Trimesh, dict]:
     """
-    Loads any 3D model (OBJ, FBX, GLB, GLTF, STL, PLY, 3DS, DAE, 3MF, OFF, etc.)
+    Loads any 3D model (BLEND, OBJ, FBX, GLB, GLTF, STL, PLY, 3DS, DAE, 3MF, OFF, etc.)
     and returns a normalized trimesh.Trimesh object along with metadata statistics.
 
     `with_stats=False` skips the summary, which costs a watertightness, volume and
@@ -177,6 +177,14 @@ def load_model(file_path: str, log=None, with_stats: bool = True) -> tuple[trime
     # otherwise load_model() without a logger dies on the first message it writes.
     log = log or (lambda *a, **k: None)
     log(f"Reading {os.path.basename(file_path)} ({os.path.getsize(file_path) / 1e6:.1f} MB)")
+
+    if ext == ".blend":
+        from engine.blend_import import load_blend
+
+        # The intermediate GLB has already passed through normalization and UV
+        # extraction. Keep that metadata and report the original project name.
+        mesh = load_blend(file_path, log)
+        return mesh, get_mesh_stats(mesh, file_path) if with_stats else {}
 
     # Strategy 1: For FBX files, use fast native ufbx parser with full UV support
     if ext == ".fbx" and HAS_UFBX:

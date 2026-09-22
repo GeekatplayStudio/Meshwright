@@ -9,10 +9,11 @@
 **Mesh analysis, repair, texturing and STL preparation for 3D printing**
 by [Geekatplay Studio](https://www.geekatplay.com) · Vladimir Chopine
 
+[![Version](https://img.shields.io/badge/version-1.5.0-6ea8fe.svg)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-d9a441.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-3776ab.svg)](https://python.org)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-6ea8fe.svg)](#install)
-[![Tests](https://img.shields.io/badge/tests-438%20passing-4cc38a.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-automated%20suite-4cc38a.svg)](tests/)
 [![MCP](https://img.shields.io/badge/MCP-ready-b06bd0.svg)](docs/MCP.md)
 
 [**☕ Support development**](https://geekatplay.gumroad.com/coffee) · [Quick start](#quick-start) · [Features](#what-it-does) · [Docs](docs/) · [MCP server](docs/MCP.md) · [Troubleshooting](#troubleshooting)
@@ -161,6 +162,8 @@ Every reduction reports how far the result strays from the original, in millimet
 
 ### 6 · Separate pieces
 
+Click a disconnected piece in the viewport to select it. **Shift-click** adds or removes pieces from the selection; clicking empty space clears it. Selected pieces turn red and stay synchronized with the list. Use **Remove selected** to delete them. Dragging still orbits the model.
+
 Multi-part models are split, colour-coded and listed with triangle counts and sizes. Tick the ones you don't want — they turn red in the viewport — then remove them. Select all with <kbd>Ctrl</kbd>+<kbd>A</kbd>.
 
 <div align="center">
@@ -302,7 +305,9 @@ Every input is validated, every call is guarded and undoable. See **[docs/MCP.md
 
 ## Supported formats
 
-**In** — OBJ · FBX · GLB · GLTF · STL · PLY · 3MF · DAE · OFF · 3DS
+Blender projects require an installed Blender. Meshwright finds Blender on PATH or in standard Windows/macOS locations; set `MESHWRIGHT_BLENDER` to its executable for a custom installation. The active scene is imported with modifiers, object transforms, and glTF-compatible materials through a temporary GLB. Source files are left unchanged. Blender coordinates retain their numeric scale; choose the appropriate source units when exporting. The file browser lists Blender projects without generating a thumbnail.
+
+**In** — BLEND · OBJ · FBX · GLB · GLTF · STL · PLY · 3MF · DAE · OFF · 3DS
 **Out** — STL (binary) · OBJ · PLY · OFF · GLB · glTF · 3MF · JSON report · PBR texture pack
 
 Textures come in embedded in the file or as companion images beside it, and go back out in OBJ,

@@ -36,6 +36,7 @@ class ModelViewer {
         this.controls.dampingFactor = 0.08;
         this.needsRender = true;
         this.controls.addEventListener('change', () => { this.needsRender = true; });
+        this.initPiecePicking();
 
         this.scene.add(new THREE.HemisphereLight(0xdfe6f0, 0x2a2420, 0.55));
         this.key = new THREE.DirectionalLight(0xfff4e0, 1.2);
@@ -162,6 +163,63 @@ class ModelViewer {
         if (this.gizmoOn) this.attachGizmo(true);
         this.fit();
         return bEdges.length / 2;
+    }
+
+    /* Orbit and pan remain drags; only a primary-button click selects a piece. */
+    initPiecePicking() {
+        const canvas = this.renderer.domElement;
+        let press = null;
+        canvas.addEventListener('pointerdown', e => {
+            if (e.button !== 0 || e.isPrimary === false) { press = null; return; }
+            if (this.gizmoOn && this.gizmo && (this.gizmo.axis || this.gizmo.dragging)) return;
+            press = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: false };
+        }, true);
+        canvas.addEventListener('pointermove', e => {
+            if (press && e.pointerId === press.id &&
+                Math.hypot(e.clientX - press.x, e.clientY - press.y) > 5) press.moved = true;
+        }, true);
+        canvas.addEventListener('pointercancel', () => { press = null; }, true);
+        canvas.addEventListener('lostpointercapture', () => { press = null; }, true);
+        canvas.addEventListener('pointerup', e => {
+            const start = press;
+            press = null;
+            if (!start || start.id !== e.pointerId || start.moved || e.button !== 0 ||
+                Math.hypot(e.clientX - start.x, e.clientY - start.y) > 5) return;
+            if (this.gizmoOn && this.gizmo && (this.gizmo.axis || this.gizmo.dragging)) return;
+            if (!this.onPiecePick || !this.mesh || !this.shellFaceCounts) return;
+            this.onPiecePick(this.pieceAt(e.clientX, e.clientY), e.shiftKey);
+        }, true);
+    }
+
+    pieceAt(clientX, clientY) {
+        if (!this.mesh || !this.shellFaceCounts) return null;
+        const rect = this.renderer.domElement.getBoundingClientRect();
+        if (!rect.width || !rect.height) return null;
+        const pointer = new THREE.Vector2(
+            (clientX - rect.left) / rect.width * 2 - 1,
+            -(clientY - rect.top) / rect.height * 2 + 1);
+        const ray = new THREE.Raycaster();
+        this.camera.updateMatrixWorld();
+        this.mesh.updateWorldMatrix(true, false);
+        ray.setFromCamera(pointer, this.camera);
+        const hit = ray.intersectObject(this.mesh, false)[0];
+        if (!hit) return null;
+        // Preview faces are grouped by shell, including at reduced detail.
+        let end = 0;
+        for (let i = 0; i < this.shellFaceCounts.length; i++) {
+            end += this.shellFaceCounts[i];
+            if (hit.faceIndex < end) return i;
+        }
+        return null;
+    }
+
+    static pickSelection(selected, piece, toggle) {
+        const next = new Set(toggle ? selected : []);
+        if (piece !== null) {
+            if (toggle && next.has(piece)) next.delete(piece);
+            else next.add(piece);
+        }
+        return next;
     }
 
     /* Selection is red and issue highlights are cyan, so the shell palette

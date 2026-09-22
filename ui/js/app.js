@@ -62,6 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     boundary_edges: b64ToBuffer(res.preview.boundary_edges),
                     uvs: res.preview.uvs ? b64ToBuffer(res.preview.uvs) : null,
                 }, res.shell_face_counts || null);
+                if (shellHighlight) window.viewer.showShells(shellSelection);
             }
             showDetail(res.detail);
         } catch (e) {
@@ -432,16 +433,30 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderShells(shells) {
         const card = $('cardShells');
         shellSelection = new Set();
+        window.viewer.onPiecePick = null;
         if (!shells || shells.length < 2) { card.classList.add('hidden'); window.viewer.hideShells(); return; }
         card.classList.remove('hidden');
         $('shellCount').textContent = shells.length;
         const list = $('shellList');
         list.innerHTML = '';
         const syncShellButtons = () => {
+            list.querySelectorAll('li').forEach(li => {
+                const cb = li.querySelector('input');
+                cb.checked = shellSelection.has(Number(cb.dataset.i));
+                li.classList.toggle('selected', cb.checked);
+            });
             $('btnShellsRemove').disabled = shellSelection.size === 0 || shellSelection.size === shells.length;
             $('btnShellsRemove').textContent = shellSelection.size ? `Remove ${shellSelection.size} selected` : 'Remove selected';
             $('btnShellsAll').textContent = shellSelection.size === shells.length ? 'Select none' : 'Select all';
             if (shellHighlight) window.viewer.showShells(shellSelection);
+        };
+        window.viewer.onPiecePick = (piece, toggle) => {
+            shellSelection = window.viewer.constructor.pickSelection(shellSelection, piece, toggle);
+            if (piece !== null) {
+                shellHighlight = true;
+                $('btnShellsHighlight').classList.add('active');
+            }
+            syncShellButtons();
         };
         $('btnShellsAll').onclick = () => {
             const all = shellSelection.size !== shells.length;
@@ -614,6 +629,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const SHORTCUTS = [
         ['Ctrl+O', 'Open model'], ['Ctrl+S', 'Export model'], ['Ctrl+Shift+S', 'Save JSON report'],
         ['Ctrl+Z', 'Undo'], ['Ctrl+Y / Ctrl+Shift+Z', 'Redo'], ['Ctrl+R', 'Repair mesh'], ['Ctrl+U', 'Re-analyse'],
+        ['Click', 'Select a piece'], ['Shift+click', 'Add or remove a piece'],
         ['Ctrl+A', 'Select all pieces'], ['Delete', 'Remove selected pieces'], ['R', 'Rotation gizmo'],
         ['F', 'Fit view'], ['W', 'Wireframe'], ['E', 'Open-edge highlight'], ['G', 'Build plate'],
         ['1 – 7', 'Top · Front · Right · Iso · Bottom · Back · Left'], ['Esc', 'Clear highlight / close dialog'],

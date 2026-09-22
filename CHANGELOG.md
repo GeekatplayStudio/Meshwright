@@ -4,6 +4,17 @@ All notable changes to Meshwright. Format based on [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-09-21
+
+### Added
+- Import Blender `.blend` projects through an installed Blender, detected automatically or configured with `MESHWRIGHT_BLENDER`. Imports the active scene through a temporary GLB with modifiers, transforms, UVs, and compatible materials; leaves the source project unchanged.
+- Select disconnected pieces directly in the viewport. Click selects one piece, Shift-click adds or removes it, and clicking empty space clears the selection. Red highlights and the Separate pieces list stay synchronized with the existing removal controls.
+- Tests covering Blender round-trip import, import failures, viewport ray picking, selection toggling, and gesture handling.
+
+### Fixed
+- Preserve piece highlights when changing viewport detail.
+- Synchronize application and npm package versions.
+
 ## [1.4.0] - 2026-09-21
 
 ### Added

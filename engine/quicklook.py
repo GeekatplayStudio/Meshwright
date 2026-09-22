@@ -555,7 +555,7 @@ READERS = {
     ".stl": _read_stl, ".glb": _read_glb, ".gltf": _read_gltf, ".obj": _read_obj,
     ".ply": _read_ply, ".off": _read_off, ".3mf": _read_3mf, ".fbx": _read_fbx,
 }
-DESCRIBE_ONLY = {".dae": "COLLADA", ".3ds": "3D Studio"}
+DESCRIBE_ONLY = {".blend": "Blender project (requires Blender)", ".dae": "COLLADA", ".3ds": "3D Studio"}
 
 
 # --------------------------------------------------------------------------- drawing

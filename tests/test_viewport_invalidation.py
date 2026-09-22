@@ -35,6 +35,8 @@ EXEMPT = {
     "modelMatrix",   # pure read
     "worldSphere",   # pure read
     "hasHeightMap",  # pure read
+    "initPiecePicking",  # registers input handlers; showShells invalidates after selection
+    "pieceAt",       # ray query; updating world matrices does not change the scene
     "updateLight",   # helper; every caller invalidates, and it does too
 }
 

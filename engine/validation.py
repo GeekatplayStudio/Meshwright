@@ -8,7 +8,7 @@ import os
 
 import numpy as np
 
-LOAD_EXTENSIONS = {".obj", ".fbx", ".glb", ".gltf", ".stl", ".ply", ".3ds", ".dae", ".3mf", ".off"}
+LOAD_EXTENSIONS = {".blend", ".obj", ".fbx", ".glb", ".gltf", ".stl", ".ply", ".3ds", ".dae", ".3mf", ".off"}
 MAX_FILE_MB = 2048
 
 

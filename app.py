@@ -103,9 +103,10 @@ class AppApi:
     # loadFile() as if it were a path. Failures are caught and logged here instead.
 
     MODEL_FILE_TYPES = (
-        '3D Models (*.obj;*.fbx;*.glb;*.gltf;*.stl;*.ply;*.3ds;*.dae;*.3mf;*.off)',
+        '3D Models (*.blend;*.obj;*.fbx;*.glb;*.gltf;*.stl;*.ply;*.3ds;*.dae;*.3mf;*.off)',
         'Wavefront OBJ (*.obj)',
         'Autodesk FBX (*.fbx)',
+        'Blender project (*.blend)',
         'GLTF and GLB (*.glb;*.gltf)',
         'STL (*.stl)',
         'PLY (*.ply)',

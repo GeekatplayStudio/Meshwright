@@ -49,7 +49,7 @@
                 </svg>
                 <div class="empty-spinner hidden" id="emptySpinner"></div>
                 <p id="emptyPrompt">Drop a model here or open one</p>
-                <small>OBJ · FBX · GLB · GLTF · STL · PLY · 3MF · DAE · OFF</small>
+                <small>BLEND · OBJ · FBX · GLB · GLTF · STL · PLY · 3MF · DAE · OFF</small>
                 <small class="note">Meshwright has no model of its own — it works on your files.</small>
                 <button id="btnDemo" class="demo-link" title="Build a small broken test object in memory">Load demo model</button>
             </div>
@@ -143,7 +143,7 @@
                 <!-- Shells -->
                 <section class="card hidden" id="cardShells">
                     <h2>Separate pieces <span class="count" id="shellCount"></span></h2>
-                    <p class="hint">Pieces are colour-coded in the view. Tick the ones to delete — they turn red — then remove.</p>
+                    <p class="hint">Click a piece in the view to select it. Shift-click adds or removes a piece; click empty space to clear. Selected pieces turn red. Drag to orbit, then use Remove selected to delete.</p>
                     <ul class="shells" id="shellList"></ul>
                     <div class="row three">
                         <button id="btnShellsAll" class="btn wide">Select all</button>
@@ -347,7 +347,7 @@
         <section>
             <h3>How it works</h3>
             <ol>
-                <li><strong>Load</strong> &mdash; OBJ, FBX, GLB/GLTF, STL, PLY, 3MF, DAE, OFF are read with trimesh (ufbx and MeshLab as fallbacks); materials are skipped and duplicate vertices merged.</li>
+                <li><strong>Load</strong> &mdash; BLEND (requires an installed Blender), OBJ, FBX, GLB/GLTF, STL, PLY, 3MF, DAE, OFF are read with trimesh (ufbx and MeshLab as fallbacks); materials are skipped and duplicate vertices merged.</li>
                 <li><strong>Diagnose</strong> &mdash; open holes, boundary and non-manifold edges, face winding, inside-out normals, degenerate, duplicate and sliver triangles, unused vertices, separate shells, scale, volume and genus. Every issue carries its location so it can be highlighted on the model. A 0&ndash;100 readiness score summarises the result.</li>
                 <li><strong>Repair</strong> &mdash; a staged pipeline where each stage is measured and kept only if it helps: cleanup &rarr; orientation &rarr; small-hole filling &rarr; MeshFix &rarr; MeshLab non-manifold repair &rarr; Manifold3D solid reconstruction &rarr; voxel remesh as last resort. It re-runs until the mesh stops changing, then re-analyses the final result.</li>
                 <li><strong>Refine</strong> &mdash; sliver triangles are merged into larger neighbours (needles collapsed, caps flipped); polygon count is reduced three ways &mdash; QuadriFlow smart retopology (clean curvature-aligned quads, true low-poly), uniform isotropic remeshing, or topology-preserving quadric collapse &mdash; always with the measured surface deviation; separate pieces can be highlighted and removed; the model can be rotated with a gizmo or in 90&deg; steps.</li>
