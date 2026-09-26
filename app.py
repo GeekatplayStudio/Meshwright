@@ -195,6 +195,32 @@ class AppApi:
         from engine import quicklook
         return {"success": True, **quicklook.look(path, px or quicklook.PREVIEW_PX)}
 
+    # ------------------------------------------------------------------ jewellery
+    @_guarded
+    def blender_status(self) -> dict:
+        return self.svc.blender_status()
+
+    @_guarded
+    def set_blender_path(self, path: str = "") -> dict:
+        return self.svc.set_blender_path(path)
+
+    def pick_blender_dialog(self) -> str:
+        """Windows' own file dialog, filtered to an executable."""
+        return self._dialog("find Blender", webview.FileDialog.OPEN, allow_multiple=False,
+                            file_types=("Blender (blender.exe)", "All files (*.*)")) or ""
+
+    @_guarded
+    def measure_ring(self) -> dict:
+        return self.svc.measure_ring()
+
+    @_guarded
+    def fix_ring(self, target_iso: float = 0.0, target_us: float = 0.0, comfort: bool = True,
+                 bevel_mm: float = 0.15, min_thickness_mm: float = 0.0,
+                 scale_percent: float = 100.0, repair_first: bool = True) -> dict:
+        return self.svc.fix_ring(target_iso=target_iso, target_us=target_us, comfort=comfort,
+                                 bevel_mm=bevel_mm, min_thickness_mm=min_thickness_mm,
+                                 scale_percent=scale_percent, repair_first=repair_first)
+
     # ------------------------------------------------------------------ printability
     @_guarded
     def list_printers(self) -> dict:

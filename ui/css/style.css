@@ -718,3 +718,39 @@ body.working { cursor: progress; }
     color: var(--accent-2); font-size: 11px; font-variant-numeric: tabular-nums;
     white-space: nowrap;
 }
+
+/* ------------------------------------------------------------------- Jewellery
+   A small audience, so the card stays shut until someone opens it — and then
+   stays open, because the person who wants it wants it every time. */
+.card-fold { padding-bottom: 8px; }
+.card-fold details > summary {
+    list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px;
+    margin: -2px 0 0; padding: 2px 0;
+}
+.card-fold details > summary::-webkit-details-marker { display: none; }
+.card-fold details > summary::before {
+    content: "›"; color: var(--muted); font-size: 16px; line-height: 1;
+    transition: transform .15s; display: inline-block;
+}
+.card-fold details[open] > summary::before { transform: rotate(90deg); }
+.card-fold details > summary h2 { margin: 0; }
+.card-fold details > summary:hover::before { color: var(--accent); }
+.card-fold details > *:not(summary) { margin-top: 10px; }
+
+.ring-blender { display: flex; align-items: center; gap: 10px; justify-content: space-between; padding: 7px 10px; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; }
+.ring-blender-state { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ring-blender-state.ok { color: var(--good); }
+.ring-blender-state.missing { color: var(--warn); }
+.ring-blender .btn.small { height: 26px; padding: 0 10px; flex-shrink: 0; }
+#cardRing input[type=number], #cardRing select { background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; font: inherit; font-size: 12px; outline: none; width: 100%; }
+#cardRing input[type=number]:focus, #cardRing select:focus { border-color: var(--accent); }
+.ring-check { align-self: end; padding-bottom: 6px; }
+#ringReport, #ringResult { margin-top: 10px; }
+.ring-facts { width: 100%; border-collapse: collapse; }
+.ring-facts td { padding: 3px 0; font-size: 12px; vertical-align: top; }
+.ring-facts td:first-child { color: var(--muted); width: 108px; }
+.ring-facts td:last-child { font-variant-numeric: tabular-nums; }
+.ring-verdict { font-weight: 600; padding: 7px 10px; border-radius: 6px; background: var(--bg); border-left: 3px solid var(--line); }
+.ring-verdict.good { color: var(--good); border-left-color: var(--good); }
+.ring-verdict.warn { color: var(--warn); border-left-color: var(--warn); }
+.ring-note { margin-top: 8px; padding: 8px 10px; border-radius: 6px; background: var(--bg); border-left: 3px solid var(--warn); color: var(--muted); font-size: 12px; line-height: 1.5; }

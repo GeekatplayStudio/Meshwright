@@ -99,10 +99,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (res.analysis) renderAnalysis(res.analysis);
         renderShells(res.shells || null);
         updateStateUI(res);
-        for (const id of ['btnRepair', 'btnReduce', 'btnExport', 'sliderReduce', 'targetInput', 'btnUnwrapUV', 'btnLoadTexture', 'btnOpenUv', 'btnPrintCheck']) {
+        for (const id of ['btnRepair', 'btnReduce', 'btnExport', 'sliderReduce', 'targetInput', 'btnUnwrapUV', 'btnLoadTexture', 'btnOpenUv', 'btnPrintCheck', 'btnRingMeasure']) {
             if ($(id)) $(id).disabled = false;
         }
         document.querySelectorAll('.rot').forEach(b => b.disabled = false);
+        if (window.meshwrightRing) window.meshwrightRing.refresh();
         updateTarget();
 
         // A textured model opens showing its texture, not the piece colours.
@@ -966,6 +967,7 @@ document.addEventListener('DOMContentLoaded', () => {
         $('stateBadge').textContent = '';
         $('reduceResult').textContent = '';
         if (window.meshwrightPrinter) window.meshwrightPrinter.clear();
+        if (window.meshwrightRing) window.meshwrightRing.clear();
         $('issueCount').textContent = '';
         $('issueList').innerHTML = '<li class="muted">—</li>';
         $('btnSlivers').classList.add('hidden');
@@ -984,7 +986,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         for (const id of ['btnRepair', 'btnReduce', 'btnExport', 'sliderReduce', 'targetInput',
                           'btnUndo', 'btnRedo', 'btnRevert', 'btnReanalyse', 'btnReport',
-                          'btnShellsRemove', 'viewDetail', 'btnPrintCheck']) {
+                          'btnShellsRemove', 'viewDetail', 'btnPrintCheck', 'btnRingMeasure', 'btnRingFix']) {
             if ($(id)) $(id).disabled = true;
         }
         if (detailSeg) detailSeg.classList.remove('reduced');
@@ -1092,6 +1094,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.meshwright = {
         load: loadFile, log: logLine, offerRecovery, progress: onProgress, toast, showModel,
         setStatus,
+        get hasModel() { return hasModel; },
         // Redraw the viewport from what the engine actually holds. Used after a
         // cancelled piece drag, where the buffer on screen was nudged about and no
         // longer matches the model.

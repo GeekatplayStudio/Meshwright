@@ -797,6 +797,122 @@ class MeshService(TextureServiceMixin):
                 out["shell_face_counts"] = [len(p.faces) for p in st.shells]
             return out
 
+    # ------------------------------------------------------------------ jewellery
+    def blender_status(self) -> dict:
+        """Where Blender is, and whether it can actually be run."""
+        from engine import settings
+        from engine.blend_import import find_blender
+        try:
+            found = find_blender()
+            return {"success": True, "found": True, "path": found,
+                    "chosen": bool(settings.get("blender_path", ""))}
+        except RuntimeError as why:
+            return {"success": True, "found": False, "path": "", "reason": str(why),
+                    "chosen": bool(settings.get("blender_path", ""))}
+
+    def set_blender_path(self, path: str = "") -> dict:
+        """
+        Remember where Blender is. An empty path goes back to searching for it.
+
+        Checked before it is stored: being told the wrong path and finding out at
+        the end of a job is worse than being told now.
+        """
+        from engine import settings
+        from engine.blend_import import blender_path
+        wanted = str(path or "").strip().strip('"')
+        if wanted and not blender_path(wanted):
+            raise ServiceError("That is not a Blender executable. Pick blender.exe itself, "
+                               "usually in Program Files\\Blender Foundation.")
+        settings.put("blender_path", wanted or None)
+        self.log(f"Blender: {wanted}" if wanted else "Blender: back to searching for it")
+        return self.blender_status()
+
+    def measure_ring(self) -> dict:
+        """Everything a jeweller would check. Changes nothing."""
+        from engine import jewellery
+        with self.lock:
+            st = self._require()
+            try:
+                found = jewellery.measure(st.mesh)
+            except jewellery.NotARing as why:
+                raise ServiceError(str(why))
+            found["rules"] = jewellery.CASTING
+            self.log(f"Ring: bore {found['bore_min_mm']}–{found['bore_max_mm']} mm, "
+                     f"size ISO {found['iso_size']} (US {found['us_size']})",
+                     "warn" if found["out_of_round"] or found["too_thin"] else "ok")
+            return {"success": True, "state_id": st.id, "ring": found}
+
+    def fix_ring(self, target_iso: float = 0.0, target_us: float = 0.0,
+                 comfort: bool = True, bevel_mm: float = 0.15,
+                 min_thickness_mm: float = 0.0, scale_percent: float = 100.0,
+                 repair_first: bool = True) -> dict:
+        """
+        Put the ring right: repair the mesh, then hand it to Blender for the
+        geometry a triangle mesh cannot fix well — a true, sized, comfort-fit bore
+        and edges taken off without losing the engraving.
+        """
+        from engine import jewellery
+        with self.lock:
+            st = self._require()
+            circumference = 0.0
+            if target_us:
+                circumference = jewellery.circumference_for_us(
+                    V.number(target_us, "target_us", 0.5, 20.0, 7.0))
+            elif target_iso:
+                circumference = V.number(target_iso, "target_iso", 35.0, 90.0, 54.0)
+            bevel = V.number(bevel_mm, "bevel_mm", 0.0, 2.0, 0.15)
+            wanted_wall = V.number(min_thickness_mm, "min_thickness_mm", 0.0, 10.0, 0.0)
+            scale = V.number(scale_percent, "scale_percent", 90.0, 115.0, 100.0)
+
+            if repair_first:
+                self.log("Repairing the mesh before the ring is corrected")
+                repaired = self.repair(strict_watertight=True, force=True)
+                if not repaired.get("success"):
+                    return repaired
+                st = self._require()
+
+            try:
+                before = jewellery.measure(st.mesh)
+            except jewellery.NotARing as why:
+                raise ServiceError(str(why))
+
+            # Solidify grows the outside; the bore has just been made correct and must
+            # not move. Only the shortfall is added, and only if there is one.
+            thicken = 0.0
+            if wanted_wall and before.get("thinnest_wall_mm") is not None:
+                shortfall = wanted_wall - before["thinnest_wall_mm"]
+                if shortfall > 0.01:
+                    thicken = round(shortfall, 3)
+
+            with self._job("fix_ring", "Correcting the ring in Blender",
+                           faces=len(st.mesh.faces)):
+                try:
+                    fixed, report = jewellery.fix(
+                        st.mesh, target_circumference_mm=circumference, comfort=bool(comfort),
+                        bevel_mm=bevel, thicken_mm=thicken, scale_percent=scale, log=self.log)
+                except RuntimeError as why:
+                    raise ServiceError(str(why))
+
+            after = jewellery.measure(fixed)
+            if circumference and after["ovality_mm"] > jewellery.OVALITY_NOTICE_MM:
+                # Cutting a bore can only take metal away, so a bore already wider
+                # than the size asked for stays where it is. Say so; do not let a
+                # ring that is still oval pass as corrected.
+                self.log(
+                    f"The bore is still {after['ovality_mm']:.2f} mm out of round: it was already "
+                    f"wider than ISO {after['iso_size']:.0f} in places, and rounding those would "
+                    f"mean adding metal. Size ISO {after['round_from_iso']:.0f} "
+                    f"(US {after['round_from_us']:.1f}) or larger comes out truly round.", "warn")
+
+            detail = {"iso_size": after["iso_size"], "us_size": after["us_size"],
+                      "ovality_mm": after["ovality_mm"], "thickened_mm": thicken,
+                      "scale_percent": scale}
+            result = self._commit(fixed, "fix_ring", detail, guard=False)
+            result["ring"] = after
+            result["ring_before"] = before
+            result["blender"] = report
+            return result
+
     # ------------------------------------------------------------------ printability
     def printers(self) -> dict:
         """Every machine on offer, and which of them a slicer on this PC knows about."""

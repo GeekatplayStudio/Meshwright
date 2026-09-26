@@ -254,6 +254,50 @@
                 </section>
 
                 <!-- Printer check -->
+                <!-- Jewellery: a small audience, so it stays shut until wanted -->
+                <section class="card card-fold" id="cardRing">
+                    <details id="ringFold">
+                        <summary><h2>Jewellery &mdash; rings for wax casting</h2></summary>
+                        <p class="hint">For a ring going to lost-wax casting. Meshwright measures it,
+                        then hands the geometry to Blender for a true, correctly sized comfort-fit
+                        bore and edges taken off without losing the engraving.</p>
+
+                        <div class="ring-blender" id="ringBlender">
+                            <span class="ring-blender-state" id="ringBlenderState">Looking for Blender&hellip;</span>
+                            <button id="btnFindBlender" class="btn small">Find Blender&hellip;</button>
+                        </div>
+
+                        <button id="btnRingMeasure" class="btn wide" disabled>Measure this ring</button>
+                        <div id="ringReport"></div>
+
+                        <div class="row two">
+                            <label><span>Size system</span>
+                                <select id="ringSizeSystem">
+                                    <option value="us">US</option>
+                                    <option value="iso">ISO / EU (mm)</option>
+                                </select></label>
+                            <label><span id="ringSizeLabel">US size</span>
+                                <input type="number" id="ringSize" step="0.25" min="1" max="20" value="7"></label>
+                        </div>
+                        <div class="row two">
+                            <label><span>Minimum wall (mm)</span>
+                                <input type="number" id="ringMinWall" step="0.05" min="0" max="5" value="1.0"></label>
+                            <label><span>Soften edges (mm)</span>
+                                <input type="number" id="ringBevel" step="0.05" min="0" max="2" value="0.15"></label>
+                        </div>
+                        <div class="row two">
+                            <label><span>Print at (%)</span>
+                                <input type="number" id="ringScale" step="0.1" min="90" max="115" value="100"></label>
+                            <label class="check ring-check"><input type="checkbox" id="ringComfort" checked><span>Comfort fit</span></label>
+                        </div>
+                        <p class="hint" id="ringScaleNote">Shrinkage is yours to set &mdash; resin, investment,
+                        metal and kiln all change it. Dial it in with a test cast.</p>
+                        <label class="check"><input type="checkbox" id="ringRepairFirst" checked><span>Repair the mesh first</span></label>
+                        <button id="btnRingFix" class="btn btn-primary wide" disabled>Fix this ring</button>
+                        <div id="ringResult"></div>
+                    </details>
+                </section>
+
                 <section class="card" id="cardPrinter">
                     <h2>Print check &mdash; will it print?</h2>
                     <p class="hint">Choose the printer this model is going to, and Meshwright measures whether the
@@ -464,6 +508,7 @@
 <script src="js/parts.js"></script>
 <script src="js/context.js"></script>
 <script src="js/marquee.js"></script>
+<script src="js/ring.js"></script>
 <script src="js/walker.js"></script>
 </body>
 </html>

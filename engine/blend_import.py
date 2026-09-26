@@ -32,10 +32,29 @@ from engine.runtime import subprocess_flags
 BLENDER_TIMEOUT = 900          # a large project takes minutes to open and write out
 
 
+def blender_path(candidate: str = "") -> str | None:
+    """A path that really is an executable, or None."""
+    if not candidate:
+        return None
+    return shutil.which(candidate) or (candidate if os.path.isfile(candidate) else None)
+
+
 def find_blender() -> str:
+    """
+    Where Blender is, in order of who is most likely to be right.
+
+    What the person told us beats what we guessed, and both beat the search — a
+    machine with three Blender versions on it should use the one they chose, and
+    should not be asked twice.
+    """
+    from engine import settings
+
+    chosen = blender_path(settings.get("blender_path", ""))
+    if chosen:
+        return chosen
     override = os.environ.get("MESHWRIGHT_BLENDER")
     if override:
-        executable = shutil.which(override) or (override if os.path.isfile(override) else None)
+        executable = blender_path(override)
         if executable:
             return executable
         raise RuntimeError("MESHWRIGHT_BLENDER does not point to a Blender executable.")
@@ -54,8 +73,8 @@ def find_blender() -> str:
         if candidate.is_file():
             return str(candidate)
     raise RuntimeError(
-        "Importing .blend files requires Blender. Install Blender or set "
-        "MESHWRIGHT_BLENDER to the full path of its executable, then retry."
+        "This needs Blender, and Meshwright could not find it. Install Blender from "
+        "blender.org, or use “Find Blender…” to point at blender.exe yourself."
     )
 
 

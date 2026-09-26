@@ -4,6 +4,56 @@ All notable changes to Meshwright. Format based on [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+### Added
+- **Rings for wax casting.** An image-to-3D service will produce a ring in under a minute, and the
+  result looks right in a render and is almost never right on a finger: the bore is an oval, its size
+  is whatever the generator felt like, the inside edge is cut square, and the band is thin where
+  metal will not fill. Generic repair — including the auto-repair those services now ship — closes
+  holes and fixes normals, and will hand back a watertight, manifold, perfectly unwearable oval.
+
+  Meshwright now measures a ring the way a jeweller would and corrects it. Load it, set the finger
+  size and the minimum wall, press **Fix this ring**: the mesh is repaired, then handed to Blender
+  for a true, correctly sized comfort-fit bore and edges taken off without losing the engraving, and
+  comes back as an ordinary undoable state. On a test ring built oval on purpose — bore
+  16.40–17.90 mm, ISO 51.5 — that is 2.4 s to a watertight ring at exactly the size asked for.
+
+  **Measuring happens here, and never guesses.** The finger axis is the principal axis carrying the
+  largest moment of inertia, which holds whatever angle the file was saved at. The bore is then read
+  by firing rays outward from it — reading vertex positions instead aliases badly, and a bore drawn
+  with 180 segments reports itself 4 mm out of round when it is nothing of the kind. A ring's size
+  is taken at its **narrowest** point, because that is where the finger meets it; averaging an oval
+  invents a size the ring does not have, and always a size too large.
+
+  **Correcting happens in Blender**, because two of the operations have no good answer in a triangle
+  mesh. Rounding a sharp edge by voxel filtering blurs away the 0.3 mm engraving that casting
+  guidelines ask for, and going fine enough to avoid that would take 1.4 billion voxels for one ring.
+  Blender's angle-limited bevel rounds the hard corners and leaves flat faces and shallow detail
+  alone — measured on a ring with 0.3 mm grooves, every groove was still 0.300 mm deep afterwards.
+  The ring is sent standing on +Z and centred, so the script works in known coordinates, and it comes
+  back where it was: measured movement, 0.000 mm.
+
+  What it will not do quietly: cutting a bore can only take metal away, so where the generator's bore
+  was already wider than the size asked for it stays oval — and the panel says so, with the smallest
+  size at which it does come out truly round. A model that is solid through the middle is refused
+  rather than handed an invented finger size. And when shrinkage compensation is set, the panel
+  reports the size as printed **and** the size once cast, separately, because the model on screen is
+  the wax and not the ring.
+
+  Every figure it judges against is published and sourced in `docs/PRD-RINGS.md`: 1.0 mm for a ring
+  band, 0.35 mm as the lost-wax floor, ISO 8653 for sizes.
+
+  The card is **collapsed by default** and remembers being opened. This is a small audience, and
+  nobody printing miniatures should have ring sizes in their way.
+
+- **Blender's location is now a setting.** A status line and **Find Blender…** in the jewellery
+  panel; the path is checked before it is stored, and a configured path beats `MESHWRIGHT_BLENDER`,
+  which beats searching. Without Blender the fix is disabled with a reason that says what to do, and
+  measuring still works.
+
+- `docs/PRD-RINGS.md` — the research behind all of this: what a wearable ring needs, what the
+  casting houses publish, what already exists, and what was measured rather than assumed.
+
+
 ## [1.6.0] - 2026-09-22
 
 ### Added

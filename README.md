@@ -44,6 +44,7 @@ Most "mesh repair" tools give you a spinner and a green tick. Meshwright tells y
 | Crash | Work lost | Background snapshots, **recovery offered on next start** |
 | Reduction | One decimation slider | **QuadriFlow smart retopology**, uniform remesh, or quadric collapse — with measured surface deviation |
 | Export | "Here is your STL" | Seven formats, and it **says when the file is not a solid** — the shell that slices with no infill |
+| AI-generated rings | An oval nobody can wear | **Measured and corrected to a real finger size**, comfort-fit bore, edges softened |
 | Multi-part models | One lump, one set of operations | **Right-click any piece** — move it, thin it, fuse it, drop it, on its own |
 | Scene files | Floor and walls welded to your model | **Lists what is in the file and lets you pick**, grouped by your own Blender collections |
 | Will it print? | You find out after six hours | **Checked against your actual printer** — 216 machines, resin and filament — before you slice |
@@ -185,7 +186,30 @@ Multi-part models rarely want the same treatment everywhere. Right-click any pie
 
 Right-clicking a piece that is not selected selects it first. Shift-right-click adds to the selection, the same as shift-click — and **Alt+drag rubber-bands a box** over the viewport to catch everything inside it at once, which is what makes a model that split into three hundred pieces workable at all. Everything stays in step with the Separate pieces panel, and every action is a numbered state you can undo.
 
-### 8 · Open only the parts you want
+### 8 · Rings for wax casting
+
+An AI service will give you a ring in a minute. It is almost never wearable: the bore is an oval, the size is whatever the generator felt like, the inside edge is cut square, and the band is thin where metal will not fill. Generic repair closes the holes and hands back a watertight, perfectly unwearable oval.
+
+Open the **Jewellery** card — collapsed by default, because this is a small audience — set the finger size and the minimum wall, and press **Fix this ring**:
+
+```
+BEFORE   bore 16.40–17.90 mm · ISO 51.5 / US 5.87 · 33% sharp faces
+         "The bore is 1.50 mm out of round. A finger needs a circle; this is an oval."
+
+AFTER    2.4 s · watertight · 0% sharp faces
+         Size as printed   ISO 56   · US 7.64
+         Size once cast    ISO 54.4 · US 7
+```
+
+Meshwright measures; **Blender** does the geometry a triangle mesh cannot. A comfort-fit bore is cut to your size — narrowest in the middle, flaring at the rims — which fixes the circle, the size and the sharp inner edge in one operation. An angle-limited bevel takes the hard corners off and leaves flat faces and engraving alone: on a ring with 0.3 mm grooves, every groove was still 0.300 mm deep afterwards. Voxel rounding, the obvious alternative, blurs that detail away.
+
+Point it at `blender.exe` once with **Find Blender…** and it is remembered. Without Blender, measuring still works and the fix says why it cannot.
+
+It refuses to be confidently wrong: a bore already wider than the size you asked for cannot be rounded by cutting, so it says so and names the smallest size that does come out round; a solid model is refused rather than given an invented finger size; and with shrinkage set, the size as printed and the size once cast are reported separately, because the model on screen is the wax.
+
+Every limit it judges against is published and sourced in [docs/PRD-RINGS.md](docs/PRD-RINGS.md).
+
+### 9 · Open only the parts you want
 
 A file often holds more than the model. A Blender project lit for rendering brings its studio floor, its reflection cards and the rig's controller widgets; a scene exported to GLB brings whatever else was in it. Meshwright used to weld all of it into one mesh, and afterwards there was no separating it again — in one real project the "model" measured 200 × 200 units because a one-face ground plane was fused to a robot that is 5.4 × 2 × 10.
 
@@ -206,7 +230,7 @@ Listing is deliberately cheap, which is what makes asking practical: a Blender p
 
 **Nothing is guessed at.** Objects the file itself marks as not-for-render start unticked — a rig's controller widgets say so in the file. Everything else starts ticked, because the project that prompted this names its ground plane *"Studio ground • excluded from model validation"* and carries no flag at all to say so, while a genuine floor tile in a printed diorama would look identical to any rule clever enough to catch it. The grouping does that work instead.
 
-### 9 · Print check — will it actually print?
+### 10 · Print check — will it actually print?
 
 Choose the printer this model is going to, and Meshwright measures whether the detail in it is something that machine can physically make. **216 machines** are built in — resin and filament, from Elegoo, Anycubic, Phrozen, Creality, Bambu Lab, Prusa and two dozen other makers — and if you have a slicer installed, its machines are offered too, marked *on this PC*. Nozzle, pixel pitch and layer height can all be typed over, because a nozzle is a consumable and you know what is fitted.
 
@@ -216,13 +240,13 @@ Anything too fine is listed, counted and clickable — it lights up on the model
 
 **Nothing is claimed unless two independent measurements agree.** Every layer is sliced and drawn at the printer's own resolution, and morphological opening removes precisely what the machine cannot lay down; that measurement needs no normals and no watertight mesh, so it is the one that decides. Separately, a ray is fired into the surface at every face to measure the wall there — with Intel Embree behind it, 336,780 exact measurements in 0.4 s, returning 10.000 mm on a sphere of known thickness 10.000 mm. But it is only right while the surface faces the right way: on one real 694,000-face model with inconsistent winding it read a uniform 0.24 mm wall straight through a solid figure. So it never decides alone. On a mesh whose winding or watertightness is in doubt its findings are withheld and the panel says why, and where the two disagree, that disagreement is itself the finding. A printability check that quietly guesses is worse than none — it sends you to a six-hour print.
 
-### 10 · Open a file and see what it is
+### 11 · Open a file and see what it is
 
 Windows draws 3D thumbnails through Microsoft's 3D Viewer, which is no longer part of Windows 11 — so the standard Open dialog shows a row of identical blank icons and a filename to guess from. **Open model** therefore opens Meshwright's own browser instead: highlight a file and it draws the model, and reports the format, size, triangle count, dimensions, whether it carries textures, and roughly how long it will take to open. Pictures fill in beside the rows, so a folder can be read at a glance, and files you opened before are one click away under **Recent**.
 
 Nothing is loaded to make a picture — each file is sampled and lit, so a 249 MB five-million-face STL is drawn in about 0.7 s and a 67 MB GLB in about 0.2 s, against the 7.7 s that opening that GLB actually takes. The Windows dialog is still one click away, and drag-and-drop is unchanged.
 
-### 11 · Nothing is ever lost
+### 12 · Nothing is ever lost
 
 Every change creates a **numbered state**.
 
@@ -232,7 +256,7 @@ Every change creates a **numbered state**.
 - **Revert to original** is explicit, confirmed, and itself undoable.
 - **New** (<kbd>Ctrl</kbd>+<kbd>N</kbd>) or <kbd>Del</kbd> closes the model and empties the workspace, after a confirmation.
 
-### 12 · Always know what it is doing
+### 13 · Always know what it is doing
 
 Long operations announce themselves before they start — how many faces they are about to process and roughly how long it will take — then show a live timer and progress bar in the bottom-right corner, synchronized with a glowing top-of-viewport progress bar and center-screen loading animations. Loading progress stays active throughout file reading, geometry conversion, and WebGL GPU buffer preparation.
 
@@ -248,7 +272,7 @@ Everything also goes to the activity console with timestamps, and to stdout, so 
 <br><em>Every backend step, with timings.</em>
 </div>
 
-### 13 · Someone to wait with
+### 14 · Someone to wait with
 
 Opening a model and writing one out are the two waits worth watching, so that is when
 a small cup strolls along the bottom of the window — and he leaves when the work is
@@ -268,7 +292,7 @@ rubber-hose walk read as drawn rather than as a sprite on rails. He keeps walkin
 as long as the work takes, and if you start something else while he is on his way out
 he turns round from wherever he happens to be standing.
 
-### 14 · Export
+### 15 · Export
 
 STL, OBJ, PLY, OFF, GLB, glTF or 3MF with source-unit scaling (mm / cm / in) and build-plate alignment, plus a **JSON report** of the diagnostics and every operation applied — good for client sign-off or a print-farm audit trail.
 
