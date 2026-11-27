@@ -1,6 +1,6 @@
 {
   "name": "meshwright",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "description": "Meshwright - mesh analysis, repair and STL preparation for 3D printing",
   "main": "app.py",
   "scripts": {

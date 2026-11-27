@@ -4,6 +4,8 @@ All notable changes to Meshwright. Format based on [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+## [1.7.1] - 2026-11-27
+
 ### Fixed
 - **Looking into a folder with certain FBX files in it closed Meshwright.** The file browser
   parses an FBX to draw its picture, and on two Tripo exports that took the whole window down
