@@ -157,7 +157,10 @@ def test_model_loader_ufbx_quad_triangulation(tmp_path):
     with open(fake_fbx, "wb") as f:
         f.write(b"fake fbx binary")
 
-    with patch("ufbx.load_file", return_value=mock_scene):
+    # The mock lives in this process, so the reader has to run here rather than in
+    # the helper _load_fbx normally starts.
+    with patch("ufbx.load_file", return_value=mock_scene), \
+            patch.object(ML, "_load_fbx", ML._read_fbx):
         loaded, stats = ML.load_model(fake_fbx)
         assert len(loaded.faces) == 2
         assert len(loaded.vertices) == 4

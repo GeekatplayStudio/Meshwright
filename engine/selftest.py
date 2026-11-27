@@ -189,6 +189,19 @@ def run(out_path=None) -> int:
         used = [f["stage"] for f in r["report"]["fixes"]]
         return "stages: " + ", ".join(used)
 
+    def fbx_helper():
+        # FBX is the one format read in a child process (see engine/_fbx_worker.py).
+        # Frozen, that means Meshwright.exe starting itself as a worker, which only
+        # works if the spec packed the module — so read a real FBX that way.
+        from engine import model_loader
+        from engine._fbx_worker import SAMPLE_FBX
+        path = os.path.join(work, "quad.fbx")
+        with open(path, "w", encoding="ascii") as handle:
+            handle.write(SAMPLE_FBX)
+        mesh, _blobs, declared = model_loader._load_fbx(path)
+        assert mesh is not None and len(mesh.faces) == 2, "the sample FBX did not come back as two triangles"
+        return f"{len(mesh.faces)} faces, {declared or '?'}-up"
+
     def manifold():
         import manifold3d as m3d
         assert m3d.Manifold.cube([1, 1, 1]).volume() > 0.99
@@ -293,6 +306,7 @@ def run(out_path=None) -> int:
         ("retopology: uniform (MeshLab)", retopo("isotropic", "isotropic"), "pymeshlab"),
         ("retopology: decimate (MeshLab)", retopo("quadric", "quadric"), "pymeshlab"),
         ("UV unwrap: xatlas helper process", unwrap, "xatlas"),
+        ("FBX reader: ufbx helper process", fbx_helper, "ufbx"),
         ("gutter fill (OpenCV)", dilate, "cv2"),
         ("exact UV transfer (rtree)", transfer, "rtree"),
         ("voxel rebuild: marching cubes (scikit-image)", voxel_rebuild, "skimage"),

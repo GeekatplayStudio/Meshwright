@@ -92,6 +92,7 @@ hiddenimports = [
     # The helper processes are found by name at run time (engine.runtime.WORKERS).
     "engine._quadriflow_worker",
     "engine.texture._xatlas_worker",
+    "engine._fbx_worker",
     # Imported lazily from app.py when the ComfyUI button is pressed.
     "scripts.install_comfyui_nodes",
     # pywebview picks its Windows backend by name.

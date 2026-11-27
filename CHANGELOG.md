@@ -4,6 +4,21 @@ All notable changes to Meshwright. Format based on [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+### Fixed
+- **Looking into a folder with certain FBX files in it closed Meshwright.** The file browser
+  parses an FBX to draw its picture, and on two Tripo exports that took the whole window down
+  with error code -1073741819 (an access violation) and no message — whatever was open went with
+  it. The cause is in the FBX reader's Python binding (ufbx 0.0.5, the newest there is): it frees
+  memory it still needs when a temporary object is dropped, and on a large scene freeing the scene
+  itself faults a few times in ten whatever order things are released in.
+
+  FBX files are now read in a helper process, the way QuadriFlow and xatlas already run. The
+  helper keeps every object the reader touches alive until it has finished, then leaves without
+  freeing anything, so neither fault gets the chance to happen. Both files now show their picture
+  in the browser and open with their textures; ten runs each, no crash. If some other file does
+  crash the reader, that is a message saying so and what to do, and Meshwright stays open. The
+  self-test now reads an FBX through the helper, so every build proves the installed program can.
+
 ## [1.7.0] - 2026-11-27
 
 ### Added

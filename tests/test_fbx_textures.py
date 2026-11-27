@@ -172,7 +172,7 @@ def test_nothing_is_decoded_while_the_scene_is_still_in_hand(tmp_path):
     Allocating a large image while the ufbx scene is still referenced corrupts its
     teardown, and the process dies with an access violation when the scene is freed —
     an 8192x8192 JPEG inside a 228 MB FBX does it every time, with no traceback.
-    engine.model_loader._load_fbx therefore keeps the scene as its own local and
+    engine.model_loader._read_fbx therefore keeps the scene as its own local and
     decodes only after returning, which works because this half hands back bytes and
     paths and never an image.
     """
@@ -191,21 +191,22 @@ def test_nothing_is_decoded_while_the_scene_is_still_in_hand(tmp_path):
 def test_the_loader_keeps_the_scene_out_of_the_decoding_step():
     """
     A structural check on engine/model_loader.py: the ufbx scene must stay inside
-    _load_fbx, and decoding must happen in load_model after it has returned. Moving
-    either across that line brings the crash back.
+    _read_fbx (which normally runs in the helper process _load_fbx starts), and
+    decoding must happen in load_model after it has returned. Moving either across
+    that line brings the crash back.
     """
     import inspect
 
     from engine import model_loader
 
-    inner = inspect.getsource(model_loader._load_fbx)
+    inner = inspect.getsource(model_loader._read_fbx) + inspect.getsource(model_loader._load_fbx)
     outer = inspect.getsource(model_loader.load_model)
 
-    assert "ufbx.load_file" in inner, "_load_fbx no longer owns the scene"
+    assert "ufbx.load_file" in inner, "_read_fbx no longer owns the scene"
     assert "ufbx.load_file" not in outer, \
         "the scene is being opened in load_model, where it outlives the decode"
     assert "decode_fbx_textures" not in inner, \
-        "textures are being decoded while _load_fbx still holds the scene"
+        "textures are being decoded while _read_fbx still holds the scene"
     assert "decode_fbx_textures" in outer, "the blobs are never turned into images"
 
 

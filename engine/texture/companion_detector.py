@@ -136,7 +136,7 @@ FBX_LEGACY_SLOTS = (
 _COLOUR_CHANNELS = {"albedo", "normal", "metallic_roughness", "orm"}
 
 
-def _texture_source(texture, model_dir: str):
+def _texture_source(texture, model_dir: str, pin=None):
     """
     Where one FBX texture slot's picture can be read from, without reading it yet.
 
@@ -148,19 +148,23 @@ def _texture_source(texture, model_dir: str):
     the names it gives, resolved against the folder the model was opened from. An
     exporter writes the path from the machine it ran on, so only the basename can be
     trusted to still mean anything here.
+
+    `pin` holds on to every ufbx object this touches; see fbx_texture_blobs.
     """
+    pin = pin if pin is not None else (lambda obj: obj)
     if texture is None:
         return None
 
-    for holder in (texture, getattr(texture, "video", None)):
-        blob = getattr(holder, "content", None)
+    for holder in (texture, pin(getattr(texture, "video", None))):
+        blob = pin(getattr(holder, "content", None))
         if blob:
             return bytes(blob)
 
     # A layered texture wraps the real file textures rather than holding bytes itself.
-    for nested in getattr(texture, "file_textures", None) or ():
+    for nested in pin(getattr(texture, "file_textures", None)) or ():
+        pin(nested)
         if nested is not texture:
-            found = _texture_source(nested, model_dir)
+            found = _texture_source(nested, model_dir, pin)
             if found is not None:
                 return found
 
@@ -175,7 +179,7 @@ def _texture_source(texture, model_dir: str):
     return None
 
 
-def fbx_texture_blobs(scene, model_path: str) -> dict[str, object]:
+def fbx_texture_blobs(scene, model_path: str, pin=None) -> dict[str, object]:
     """
     Where each channel's artwork lives, as raw bytes or a path — nothing decoded.
 
@@ -188,7 +192,16 @@ def fbx_texture_blobs(scene, model_path: str) -> dict[str, object]:
     The first material to supply a channel wins. A multi-material FBX can name a
     different image per part, and Meshwright carries one set of maps for the whole
     model, so the rest are reported rather than silently blended.
+
+    `pin` is called with every ufbx object reached, and must keep each one alive until
+    the scene is released — engine.model_loader._load_fbx explains why. Without one,
+    the objects are kept for the length of this call, which is enough on its own.
     """
+    kept = []
+    if pin is None:
+        def pin(obj):
+            kept.append(obj)
+            return obj
     found: dict[str, object] = {}
     model_dir = os.path.dirname(os.path.abspath(model_path))
     # One texture is normally reachable through both the pbr and the legacy view of
@@ -197,13 +210,14 @@ def fbx_texture_blobs(scene, model_path: str) -> dict[str, object]:
     taken: dict[str, object] = {}
     passed_over = set()
 
-    for material in getattr(scene, "materials", None) or ():
+    for material in pin(getattr(scene, "materials", None)) or ():
+        pin(material)
         for group, slots in (("pbr", FBX_PBR_SLOTS), ("fbx", FBX_LEGACY_SLOTS)):
-            bag = getattr(material, group, None)
+            bag = pin(getattr(material, group, None))
             if bag is None:
                 continue
             for slot, channel in slots:
-                texture = getattr(getattr(bag, slot, None), "texture", None)
+                texture = pin(getattr(pin(getattr(bag, slot, None)), "texture", None))
                 if texture is None:
                     continue
                 ident = getattr(texture, "element_id", id(texture))
@@ -211,7 +225,7 @@ def fbx_texture_blobs(scene, model_path: str) -> dict[str, object]:
                     if taken.get(channel) != ident:
                         passed_over.add((channel, ident))
                     continue
-                source = _texture_source(texture, model_dir)
+                source = _texture_source(texture, model_dir, pin)
                 if source is None:
                     continue
                 found[channel] = source

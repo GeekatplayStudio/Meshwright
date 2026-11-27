@@ -10,7 +10,7 @@ Data files
     says on the tin.
 
 Helper processes
-    QuadriFlow and xatlas run in a child process so that a native crash becomes an exit
+    QuadriFlow, xatlas and the FBX reader run in a child process so that a native crash becomes an exit
     code instead of a closed window. From source the child is `python worker.py`.
     Frozen there is no Python and no worker.py on disk, and `sys.executable` is
     Meshwright.exe itself — so the same exe is started again with a flag saying "you are
@@ -41,6 +41,7 @@ WORKER_FLAG = "--meshwright-worker"
 WORKERS = {
     "quadriflow": ("engine._quadriflow_worker", "main"),
     "xatlas": ("engine.texture._xatlas_worker", "main"),
+    "fbx": ("engine._fbx_worker", "main"),
 }
 
 
