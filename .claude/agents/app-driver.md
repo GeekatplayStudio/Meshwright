@@ -21,7 +21,11 @@ The shape of a run:
 1. Launch `.venv\Scripts\pythonw.exe app.py` with the debug port set and
    **`LOCALAPPDATA` pointed at a throwaway folder** — never the real one, which holds
    crash-recovery snapshots that after a crash are the only copy of someone's work
-2. Poll `http://127.0.0.1:9333/json` for the page, open a CDP socket
+2. Poll `http://127.0.0.1:9344/json` and take the page whose **title contains
+   "Meshwright"**; if none does, stop and say so. Never use port 9333 and never take
+   "the first page": 9333 is the user's own Edge, and a run once drove a tab of theirs.
+   Launch with `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9344`,
+   then open a CDP socket to that page
 3. Install an error collector: `window.__errs = []` plus a `window.addEventListener('error', …)`
 4. Wait for the bridge: `window.pywebview && window.pywebview.api && window.<feature>`
 5. Click the real controls. Read the real panel values back

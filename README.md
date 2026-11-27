@@ -405,7 +405,8 @@ Meshwright is a careful integration of the best open mesh libraries. Full credit
 | [Rtree](https://github.com/Toblerity/rtree) + [libspatialindex](https://github.com/libspatialindex/libspatialindex) | AABB queries behind exact UV transfer | MIT |
 | [OpenCV](https://opencv.org/) | Texture gutter dilation | Apache-2.0 |
 | [Pillow](https://python-pillow.org/) | Texture image IO and PBR map generation | MIT-CMU |
-| [Three.js](https://threejs.org/) r128 | WebGL viewport | MIT |
+| [Three.js](https://threejs.org/) r187 | WebGL viewport | MIT |
+| [three-mesh-bvh](https://github.com/gkjohnson/three-mesh-bvh) | Fast piece picking and box-select on large models | MIT |
 | [pywebview](https://pywebview.flowrl.com/) | Desktop shell (Edge WebView2) | BSD-3 |
 | [ufbx](https://github.com/ufbx/ufbx) | FBX fallback loader | MIT |
 | [MCP SDK](https://github.com/modelcontextprotocol/python-sdk) | MCP server | MIT |
@@ -525,7 +526,7 @@ two outputs are what to attach to a bug report.
 ```bash
 python -m venv .venv
 .venv\Scripts\python -m pip install -r requirements-dev.txt
-npm install       # vendors Three.js into ui/vendor and installs eslint
+npm install       # bundles Three.js into ui/vendor and installs eslint
 
 npm test          # pytest, 347 tests
 npm run lint      # eslint + ruff

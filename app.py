@@ -80,6 +80,21 @@ def _guarded(fn):
     return wrapper
 
 
+
+def _three_revision() -> str | None:
+    """The Three.js revision the viewport ships with, e.g. "r187".
+
+    Read from the banner scripts/vendor-three.js writes on the first line of the
+    bundle, so the About box cannot drift from the file that is really loaded.
+    """
+    import re
+    try:
+        with open(resource_path("ui", "vendor", "three.bundle.min.js"), encoding="utf-8") as f:
+            found = re.search(r"Three\.js (r\d+)", f.readline())
+    except OSError:
+        return None
+    return found.group(1) if found else None
+
 class AppApi:
     """Exposed to the UI through pywebview."""
 
@@ -431,7 +446,7 @@ class AppApi:
             except PackageNotFoundError:
                 libs[name] = None
         return {"success": True, "version": __version__, "python": platform.python_version(),
-                "platform": f"{platform.system()} {platform.release()}", "libraries": libs, "three": "r128"}
+                "platform": f"{platform.system()} {platform.release()}", "libraries": libs, "three": _three_revision()}
 
     @_guarded
     def open_url(self, url: str) -> dict:

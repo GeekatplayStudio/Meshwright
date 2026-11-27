@@ -263,7 +263,7 @@ def run(out_path=None) -> int:
 
     def files():
         missing = [p for p in ("ui/index.html", "ui/js/app.js", "ui/js/viewer.js", "ui/css/style.css",
-                               "ui/vendor/three.min.js", "ui/assets/icon.ico",
+                               "ui/vendor/three.bundle.min.js", "ui/assets/icon.ico",
                                "comfyui_nodes/Geekatplay-3D-MeshFix/__init__.py")
                    if not os.path.exists(resource_path(*p.split("/")))]
         assert not missing, f"missing from the program folder: {missing}"

@@ -1,4 +1,20 @@
 /* Meshwright viewport — Geekatplay Studio */
+
+/* Every surface, line and light colour in this file was chosen by eye under
+   Three.js r128, which used a hex value as-is and only converted on output. Since
+   r152, Three.js reads a hex value as sRGB and converts it to linear first, which
+   draws each of them noticeably darker. Marking them linear keeps the viewport
+   looking the way it was tuned. The background is the exception — it is matched
+   to the page's own #111315 and stays plain sRGB. */
+function linear(hex) {
+    return new THREE.Color().setHex(hex, THREE.LinearSRGBColorSpace);
+}
+
+/* r155 made lights physically based: a light of intensity 1 now gives 1/π of
+   what it did, so every intensity this file sets (including the Power slider's)
+   is scaled back up to look as it was tuned. */
+const LIGHT_SCALE = Math.PI;
+
 class ModelViewer {
     constructor(containerId) {
         this.container = document.getElementById(containerId);
@@ -23,10 +39,15 @@ class ModelViewer {
         this.camera = new THREE.PerspectiveCamera(40, w / h, 0.1, 20000);
         this.camera.position.set(150, 120, 200);
 
-        this.renderer = new THREE.WebGLRenderer({ antialias: true });
+        try {
+            this.renderer = new THREE.WebGLRenderer({ antialias: true });
+        } catch (e) {
+            this.showNoWebGL();
+            throw e;
+        }
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         this.renderer.setSize(w, h);
-        this.renderer.outputEncoding = THREE.sRGBEncoding;
+        this.renderer.outputColorSpace = THREE.SRGBColorSpace;
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
         this.renderer.toneMappingExposure = 1.0;
         this.container.appendChild(this.renderer.domElement);
@@ -38,22 +59,22 @@ class ModelViewer {
         this.controls.addEventListener('change', () => { this.needsRender = true; });
         this.initPiecePicking();
 
-        this.scene.add(new THREE.HemisphereLight(0xdfe6f0, 0x2a2420, 0.55));
-        this.key = new THREE.DirectionalLight(0xfff4e0, 1.2);
+        this.scene.add(new THREE.HemisphereLight(linear(0xdfe6f0), linear(0x2a2420), 0.55 * LIGHT_SCALE));
+        this.key = new THREE.DirectionalLight(linear(0xfff4e0), 1.2 * LIGHT_SCALE);
         this.scene.add(this.key);
-        this.fill = new THREE.DirectionalLight(0x9fb8d8, 0.35);
+        this.fill = new THREE.DirectionalLight(linear(0x9fb8d8), 0.35 * LIGHT_SCALE);
         this.fill.position.set(-200, 80, -150);
         this.scene.add(this.fill);
         this.updateLight();
 
-        this.grid = new THREE.GridHelper(256, 16, 0x3a3f47, 0x22262b);
+        this.grid = ModelViewer.makeGrid(256, 16);
         this.scene.add(this.grid);
 
         this.materials = {
-            shaded: new THREE.MeshStandardMaterial({ color: 0xb9bec6, roughness: 0.55, metalness: 0.05, side: THREE.DoubleSide }),
-            clay: new THREE.MeshStandardMaterial({ color: 0xd8b98a, roughness: 0.9, metalness: 0.0, side: THREE.DoubleSide }),
+            shaded: new THREE.MeshStandardMaterial({ color: linear(0xb9bec6), roughness: 0.55, metalness: 0.05, side: THREE.DoubleSide }),
+            clay: new THREE.MeshStandardMaterial({ color: linear(0xd8b98a), roughness: 0.9, metalness: 0.0, side: THREE.DoubleSide }),
             normals: new THREE.MeshNormalMaterial({ side: THREE.DoubleSide }),
-            xray: new THREE.MeshBasicMaterial({ color: 0x9fc4ff, transparent: true, opacity: 0.18, side: THREE.DoubleSide, depthWrite: false }),
+            xray: new THREE.MeshBasicMaterial({ color: linear(0x9fc4ff), transparent: true, opacity: 0.18, side: THREE.DoubleSide, depthWrite: false }),
             shells: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92, metalness: 0.0, side: THREE.DoubleSide }),
             pbr: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5, metalness: 0.05, side: THREE.DoubleSide }),
             albedo: new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide }),
@@ -68,6 +89,23 @@ class ModelViewer {
 
         new ResizeObserver(() => this.resize()).observe(this.container);
         this.animate();
+    }
+
+    /* Three.js has needed WebGL 2 since r163. Without it the viewport would just be
+       an empty dark box, so say what is wrong and what fixes it. */
+    showNoWebGL() {
+        const note = document.createElement('div');
+        note.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;box-sizing:border-box;' +
+            'padding:24px;text-align:center;color:#e6e8eb;font:14px/1.5 sans-serif;';
+        note.textContent = 'The 3D view could not start: this computer\'s graphics driver does not offer WebGL 2. ' +
+            'Updating the graphics driver (from the Intel, AMD or NVIDIA website, or through Windows Update) ' +
+            'usually fixes it. Then close Meshwright and open it again.';
+        this.container.appendChild(note);
+    }
+
+    /* The grid's line colours are tuned like everything else here; see linear(). */
+    static makeGrid(size, divisions) {
+        return new THREE.GridHelper(size, divisions, linear(0x3a3f47), linear(0x22262b));
     }
 
     animate() {
@@ -130,8 +168,9 @@ class ModelViewer {
             const uvs = (preview.uvs instanceof ArrayBuffer || ArrayBuffer.isView(preview.uvs))
                 ? new Float32Array(preview.uvs.buffer || preview.uvs)
                 : new Float32Array(Uint8Array.from(atob(preview.uvs), c => c.charCodeAt(0)).buffer);
+            // Since r151 the AO map reads the same 'uv' channel as every other map
+            // (texture.channel 0), so the 'uv2' copy r128 needed is gone.
             geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
-            geometry.setAttribute('uv2', new THREE.BufferAttribute(uvs, 2));
         }
 
         this.shellFaceCounts = shellFaceCounts || null;
@@ -155,7 +194,7 @@ class ModelViewer {
             }
             const eg = new THREE.BufferGeometry();
             eg.setAttribute('position', new THREE.BufferAttribute(arr, 3));
-            this.edgeLines = new THREE.LineSegments(eg, new THREE.LineBasicMaterial({ color: 0xe5534b, depthTest: false }));
+            this.edgeLines = new THREE.LineSegments(eg, new THREE.LineBasicMaterial({ color: linear(0xe5534b), depthTest: false }));
             this.edgeLines.renderOrder = 10;
             this.edgeLines.visible = this.showEdges;
             this.modelGroup.add(this.edgeLines);
@@ -205,6 +244,12 @@ class ModelViewer {
         this.camera.updateMatrixWorld();
         this.mesh.updateWorldMatrix(true, false);
         ray.setFromCamera(pointer, this.camera);
+        if (this.pickTree()) {
+            // Walk the tree instead of testing every triangle, and stop at the
+            // nearest hit — the only one a click is asking about.
+            this.mesh.raycast = THREE.acceleratedRaycast;
+            ray.firstHitOnly = true;
+        }
         const hit = ray.intersectObject(this.mesh, false)[0];
         if (!hit) return null;
         // Preview faces are grouped by shell, including at reduced detail.
@@ -214,6 +259,41 @@ class ModelViewer {
             if (hit.faceIndex < end) return i;
         }
         return null;
+    }
+
+    /* The search tree over the model's triangles (three-mesh-bvh), which is what
+       lets a click or a rubber band on a multi-million-face model answer without
+       visiting every triangle.
+
+       Built the first time it is needed rather than on load, for the same reason
+       as the wireframe: most models are opened, checked and exported without a
+       single pick, and building it costs about a second per few million faces.
+
+       `indirect` matters. By default the tree reorders the index buffer to suit
+       itself, and a piece here IS a run of faces in that buffer — reordered, every
+       pick would report the wrong piece. Indirect leaves the buffer alone.
+
+       Returns null if the tree cannot be had (an old bundle, or no memory for it);
+       both callers then fall back to the plain search they used before. */
+    pickTree() {
+        if (!this.mesh || !THREE.MeshBVH) return null;
+        const geometry = this.mesh.geometry;
+        if (!geometry.boundsTree && !geometry.userData.noPickTree) {
+            try {
+                geometry.boundsTree = new THREE.MeshBVH(geometry, { indirect: true });
+            } catch (e) {
+                geometry.boundsTree = null;
+                geometry.userData.noPickTree = true;   // do not retry on every click
+                console.warn('Picking falls back to the plain search: the search tree could not be built.', e);
+            }
+        }
+        return geometry.boundsTree || null;
+    }
+
+    /* The tree describes the vertices as they were when it was built. Anything
+       that moves them has to drop it, or picks land where the model used to be. */
+    dropPickTree() {
+        if (this.mesh) this.mesh.geometry.boundsTree = null;
     }
 
     static pickSelection(selected, piece, toggle) {
@@ -228,13 +308,15 @@ class ModelViewer {
     /* Selection is red and issue highlights are cyan, so the shell palette
        avoids both: blue, violet, green, amber, magenta, lime, indigo, orange. */
     static shellColor(i, selected) {
+        // These go straight into a vertex-colour buffer, which Three.js reads as
+        // linear; they are tuned as linear values, the same as linear() above.
         const c = new THREE.Color();
-        if (selected) return c.setHex(0xe5534b);
+        if (selected) return c.setHex(0xe5534b, THREE.LinearSRGBColorSpace);
         const base = [0.62, 0.78, 0.36, 0.12, 0.88, 0.24, 0.70, 0.07];
         const hue = base[i % base.length];
         // Deep and saturated: a large piece under the key light washes out otherwise.
         const light = 0.44 - 0.08 * (Math.floor(i / base.length) % 3);
-        c.setHSL(hue, 0.72, light);
+        c.setHSL(hue, 0.72, light, THREE.LinearSRGBColorSpace);
         return c;
     }
 
@@ -288,7 +370,7 @@ class ModelViewer {
         pts.forEach((v, i) => { arr[i * 3] = v.x; arr[i * 3 + 1] = v.y; arr[i * 3 + 2] = v.z; });
         const pg = new THREE.BufferGeometry();
         pg.setAttribute('position', new THREE.BufferAttribute(arr, 3));
-        const dots = new THREE.Points(pg, new THREE.PointsMaterial({ color: 0x22d3ee, size: 8, sizeAttenuation: false, depthTest: false }));
+        const dots = new THREE.Points(pg, new THREE.PointsMaterial({ color: linear(0x22d3ee), size: 8, sizeAttenuation: false, depthTest: false }));
         dots.renderOrder = 20;
         group.add(dots);
 
@@ -300,11 +382,11 @@ class ModelViewer {
         const center = new THREE.Vector3();
         box.getCenter(center);
         const sphere = new THREE.Mesh(new THREE.SphereGeometry(areaR, 24, 16),
-            new THREE.MeshBasicMaterial({ color: 0x22d3ee, transparent: true, opacity: 0.10, depthWrite: false }));
+            new THREE.MeshBasicMaterial({ color: linear(0x22d3ee), transparent: true, opacity: 0.10, depthWrite: false }));
         sphere.position.copy(center);
         group.add(sphere);
         const ring = new THREE.Mesh(new THREE.SphereGeometry(areaR, 24, 16),
-            new THREE.MeshBasicMaterial({ color: 0x22d3ee, wireframe: true, transparent: true, opacity: 0.35, depthTest: false }));
+            new THREE.MeshBasicMaterial({ color: linear(0x22d3ee), wireframe: true, transparent: true, opacity: 0.35, depthTest: false }));
         ring.position.copy(center);
         ring.renderOrder = 19;
         group.add(ring);
@@ -360,7 +442,8 @@ class ModelViewer {
             this.gizmo.addEventListener('mouseUp', () => {
                 if (this.onRotate) this.onRotate(this.modelMatrix());
             });
-            this.scene.add(this.gizmo);
+            // Since r169 the controls are not themselves in the scene; what draws is their helper.
+            this.scene.add(this.gizmo.getHelper());
         }
         if (on && this.modelGroup) {
             this.gizmo.attach(this.modelGroup);
@@ -388,11 +471,14 @@ class ModelViewer {
         const rect = this.renderer.domElement.getBoundingClientRect();
         if (!rect.width || !rect.height) return found;
 
-        const position = this.mesh.geometry.getAttribute('position');
-        const index = this.mesh.geometry.getIndex().array;
         this.camera.updateMatrixWorld();
         this.mesh.updateWorldMatrix(true, false);
         const world = this.mesh.matrixWorld;
+        const tree = this.pickTree();
+        if (tree) return this.piecesInBoxByTree(tree, rect, left, top, right, bottom);
+
+        const position = this.mesh.geometry.getAttribute('position');
+        const index = this.mesh.geometry.getIndex().array;
         const point = new THREE.Vector3();
 
         let face = 0;
@@ -414,6 +500,112 @@ class ModelViewer {
                 }
             }
             face = end;
+        });
+        return found;
+    }
+
+
+    /* The same answer as the loop above, found through the search tree.
+
+       The rectangle on screen is a thin pyramid in space — the camera's own view
+       volume, cropped to the box. Expressed in the mesh's own coordinates, whole
+       branches of the tree that lie outside it are discarded without looking at
+       a single triangle, which is what makes a drag that catches nothing — the
+       expensive case for the loop — the cheapest one here. */
+    piecesInBoxByTree(tree, rect, left, top, right, bottom) {
+        const found = new Set();
+        // Screen rectangle -> normalised device coordinates (y up).
+        const x0 = (left - rect.left) / rect.width * 2 - 1;
+        const x1 = (right - rect.left) / rect.width * 2 - 1;
+        const y0 = -(bottom - rect.top) / rect.height * 2 + 1;
+        const y1 = -(top - rect.top) / rect.height * 2 + 1;
+        const w = Math.max(x1 - x0, 1e-9), h = Math.max(y1 - y0, 1e-9);
+        // Stretch that rectangle to fill the view, so the ordinary six planes of a
+        // camera's view volume become the six sides of the box that was drawn.
+        const crop = new THREE.Matrix4().set(
+            2 / w, 0, 0, -(x1 + x0) / w,
+            0, 2 / h, 0, -(y1 + y0) / h,
+            0, 0, 1, 0,
+            0, 0, 0, 1);
+        const toBox = crop.multiply(this.camera.projectionMatrix)
+            .multiply(this.camera.matrixWorldInverse).multiply(this.mesh.matrixWorld);
+        const volume = new THREE.Frustum().setFromProjectionMatrix(toBox);
+
+        const position = this.mesh.geometry.getAttribute('position').array;
+        const index = this.mesh.geometry.getIndex().array;
+        const corner = new THREE.Vector3();
+        const cornerInside = v => volume.containsPoint(
+            corner.set(position[v * 3], position[v * 3 + 1], position[v * 3 + 2]));
+        const faceInside = f => cornerInside(index[f * 3]) || cornerInside(index[f * 3 + 1]) ||
+            cornerInside(index[f * 3 + 2]);
+
+        // Where each piece's run of faces starts and ends.
+        const counts = this.shellFaceCounts;
+        const starts = new Array(counts.length), ends = new Array(counts.length);
+        let total = 0, pieces = 0;
+        for (let i = 0; i < counts.length; i++) {
+            starts[i] = total; total += counts[i]; ends[i] = total;
+            if (counts[i] > 0) pieces++;
+        }
+
+        // First, a glance at the first few faces of every piece. A band drawn round
+        // the whole model catches each piece on its first vertex, and the tree — which
+        // is organised by place, not by piece — would otherwise have to walk every
+        // triangle in view to learn the same thing.
+        for (let i = 0; i < counts.length; i++) {
+            const stop = Math.min(ends[i], starts[i] + 4);
+            for (let f = starts[i]; f < stop; f++) {
+                if (faceInside(f)) { found.add(i); break; }
+            }
+        }
+        if (found.size === pieces) return found;
+
+        const pieceOf = face => {
+            let lo = 0, hi = ends.length - 1;
+            while (lo < hi) {
+                const mid = (lo + hi) >> 1;
+                if (face < ends[mid]) hi = mid; else lo = mid + 1;
+            }
+            return lo;
+        };
+        const whollyInside = box => {
+            // Six planes, and the box corner furthest behind each one.
+            for (const plane of volume.planes) {
+                const n = plane.normal;
+                if (n.x * (n.x > 0 ? box.min.x : box.max.x) + n.y * (n.y > 0 ? box.min.y : box.max.y) +
+                    n.z * (n.z > 0 ? box.min.z : box.max.z) + plane.constant < 0) return false;
+            }
+            return true;
+        };
+        // Neighbouring triangles nearly always belong to one piece, so remember the
+        // run the last one fell in and skip the search while that holds.
+        let runStart = 0, runEnd = 0, runPiece = -1, runDone = false;
+
+        tree.shapecast({
+            intersectsBounds: box => {
+                if (!volume.intersectsBox(box)) return THREE.BVH_NOT_INTERSECTED;
+                return whollyInside(box) ? THREE.BVH_CONTAINED : THREE.BVH_INTERSECTED;
+            },
+            // Whole ranges at a time rather than a callback per triangle: for a branch
+            // that lies entirely inside the band there is nothing to measure, only
+            // pieces to tick off.
+            intersectsRange: (offset, count, contained) => {
+                for (let i = offset, end = offset + count; i < end; i++) {
+                    const face = tree.resolveTriangleIndex(i);
+                    if (face < runStart || face >= runEnd) {
+                        runPiece = pieceOf(face);
+                        runStart = starts[runPiece]; runEnd = ends[runPiece];
+                        runDone = found.has(runPiece);
+                    }
+                    if (runDone) continue;
+                    if (contained || faceInside(face)) {
+                        found.add(runPiece);
+                        runDone = true;
+                        if (found.size === pieces) return true;   // everything is caught: stop looking
+                    }
+                }
+                return false;
+            },
         });
         return found;
     }
@@ -490,7 +682,7 @@ class ModelViewer {
                     this.onPieceMove([shift.x, -shift.z, shift.y]);
                 }
             });
-            this.scene.add(this.mover);
+            this.scene.add(this.mover.getHelper());
         }
         this.onPieceMove = onMoved;
         this.mover.attach(this.moveHandle);
@@ -510,6 +702,7 @@ class ModelViewer {
                             position.getY(v) + step.y, position.getZ(v) + step.z);
         }
         position.needsUpdate = true;
+        this.dropPickTree();
         this.mesh.geometry.computeBoundingSphere();
         // The open-edge overlay and the wireframe are built from the geometry as it
         // was; they catch up when the move is committed and the preview is rebuilt.
@@ -557,6 +750,7 @@ class ModelViewer {
         for (const o of [this.mesh, this.wire, this.edgeLines]) {
             if (o) o.geometry.applyMatrix4(m);
         }
+        this.dropPickTree();
         this.clearHighlight();
         this.modelGroup.quaternion.identity();
         this.modelGroup.updateMatrixWorld(true);
@@ -612,6 +806,7 @@ class ModelViewer {
         for (const o of [this.mesh, this.wire, this.edgeLines]) {
             if (!o) continue;
             if (o.parent) o.parent.remove(o);
+            o.geometry.boundsTree = null;
             o.geometry.dispose();
         }
         if (this.modelGroup) {
@@ -675,7 +870,8 @@ class ModelViewer {
         this.updateLight();
         const gridSize = Math.max(100, Math.ceil(s.radius * 3 / 50) * 50);
         this.scene.remove(this.grid);
-        this.grid = new THREE.GridHelper(gridSize, Math.round(gridSize / 10), 0x3a3f47, 0x22262b);
+        this.grid.dispose();
+        this.grid = ModelViewer.makeGrid(gridSize, Math.round(gridSize / 10));
         this.grid.visible = this.gridVisible !== false;
         this.scene.add(this.grid);
         this.requestRender();
@@ -690,7 +886,7 @@ class ModelViewer {
     buildWire() {
         if (this.wire || !this.mesh) return;
         this.wire = new THREE.LineSegments(new THREE.WireframeGeometry(this.mesh.geometry),
-            new THREE.LineBasicMaterial({ color: 0x6b7280, transparent: true, opacity: 0.35 }));
+            new THREE.LineBasicMaterial({ color: linear(0x6b7280), transparent: true, opacity: 0.35 }));
         this.modelGroup.add(this.wire);
         this.requestRender();
     }
@@ -714,7 +910,7 @@ class ModelViewer {
         this.requestRender();
     }
     setLight(az, el, power) {
-        this.lightAz = az; this.lightEl = el; this.key.intensity = power;
+        this.lightAz = az; this.lightEl = el; this.key.intensity = power * LIGHT_SCALE;
         this.updateLight();
         this.requestRender();
     }
@@ -729,7 +925,8 @@ class ModelViewer {
             const tex = loader.load(dataUri, () => { this.requestRender(); });
             tex.wrapS = THREE.RepeatWrapping;
             tex.wrapT = THREE.RepeatWrapping;
-            if (isColor) tex.encoding = THREE.sRGBEncoding;
+            // Data maps (normal, roughness, ...) keep the default NoColorSpace.
+            if (isColor) tex.colorSpace = THREE.SRGBColorSpace;
             return tex;
         };
 

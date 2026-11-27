@@ -42,8 +42,8 @@ about it. Specific beats clever.
 ## Before you say it works
 
 Drive it in the real window. The pattern is in the session scratchpad: launch `app.py`
-with `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9333`, attach over
-CDP, click the actual buttons, screenshot, and assert on what came back. Bugs this caught
+with `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9344` (not 9333 — that is
+the user's own Edge), attach over CDP to the page titled "Meshwright", click the actual buttons, screenshot, and assert on what came back. Bugs this caught
 that reading the code did not: a list that rebuilt itself on every click and lost the
 clicks; a state flag that left a drag handle stuck; a menu acting on a different piece
 than the one pointed at.

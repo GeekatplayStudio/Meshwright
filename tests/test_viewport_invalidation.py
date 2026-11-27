@@ -41,6 +41,9 @@ EXEMPT = {
     "piecesInBox",   # ray-free screen query; updating world matrices changes no pixel
     "verticesOfPieces",  # pure read: walks the index buffer, changes nothing
     "centreOfPieces",    # pure read: measures the chosen pieces
+    "pickTree",          # builds the search tree used by picks; nothing drawn changes
+    "dropPickTree",      # forgets that tree; every caller has moved vertices and invalidates
+    "piecesInBoxByTree", # piecesInBox answered through the tree: a query, like its caller
 }
 
 

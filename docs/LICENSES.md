@@ -17,6 +17,7 @@ present on your machine.
 | SciPy | BSD-3-Clause | https://scipy.org |
 | scikit-image | BSD-3-Clause | https://scikit-image.org |
 | Three.js | MIT | https://threejs.org |
+| three-mesh-bvh | MIT | https://github.com/gkjohnson/three-mesh-bvh |
 | pywebview | BSD-3-Clause | https://pywebview.flowrl.com |
 | ufbx | MIT | https://github.com/ufbx/ufbx |
 | MCP Python SDK | MIT | https://github.com/modelcontextprotocol/python-sdk |

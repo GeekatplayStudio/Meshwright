@@ -53,6 +53,26 @@ All notable changes to Meshwright. Format based on [Keep a Changelog](https://ke
 - `docs/PRD-RINGS.md` — the research behind all of this: what a wearable ring needs, what the
   casting houses publish, what already exists, and what was measured rather than assumed.
 
+### Changed
+- **The viewport runs on Three.js r187** (was r128, from 2021). Three.js no longer ships the
+  plain-script build the app loaded, so `npm install` now bundles it with its orbit and gizmo
+  controls into one file, `ui/vendor/three.bundle.min.js`, and the window loads it the same way as
+  before. Nothing new is needed to run Meshwright; the bundle ships in the ZIP.
+  r187 reads colours and light strengths differently from r128, so the viewport sets both so the
+  model, grid, edges and piece colours look as they did. The About box now reads the version from
+  the bundle itself.
+- **Clicking a piece and Alt+drag box-select no longer slow down with model size.** Both used to
+  look at every triangle; they now use a search tree over the mesh
+  ([three-mesh-bvh](https://github.com/gkjohnson/three-mesh-bvh), MIT, bundled with Three.js).
+  Measured on an 8.2-million-face model: a click went from 3 s to under a millisecond, and a drag
+  that catches nothing from 0.8 s to under a millisecond. The tree is built the first time you
+  click or drag on a model (about 3.6 s at that size, a fraction of a second on ordinary ones) and
+  rebuilt after a piece is moved or the model is turned. The pieces picked are the same as before.
+- r187 needs **WebGL 2**. On a computer whose graphics driver lacks it, the viewport now says so
+  and suggests updating the driver, instead of staying an empty dark box.
+- All Python and npm dependencies updated to their latest releases within the existing version
+  ranges (NumPy 2.5, trimesh 5.2, Pillow 13, OpenCV 5.1, mcp 2.3, eslint 10.15).
+
 
 ## [1.6.0] - 2026-09-22
 

@@ -4,7 +4,7 @@
   "description": "Meshwright - mesh analysis, repair and STL preparation for 3D printing",
   "main": "app.py",
   "scripts": {
-    "test": "pytest --cov=engine --cov=app tests/",
+    "test": "pytest --cov=engine --cov=app tests/ && node --test tests/test_piece_picking.cjs",
     "lint": "npx eslint ui/js/ && ruff check .",
     "start": "python app.py",
     "mcp": "python mcp_server.py",
@@ -24,8 +24,10 @@
   "author": "Vladimir Chopine, Geekatplay Studio",
   "license": "MIT",
   "devDependencies": {
+    "esbuild": "^0.28.2",
     "eslint": "^10.9.0",
-    "globals": "^16.0.0",
-    "three": "^0.128.0"
+    "globals": "^17.14.0",
+    "three": "^0.187.0",
+    "three-mesh-bvh": "0.9.18"
   }
 }

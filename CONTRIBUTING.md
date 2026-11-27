@@ -9,7 +9,7 @@ git clone https://github.com/GeekatplayStudio/Meshwright.git
 cd Meshwright
 python -m venv .venv
 .venv\Scripts\python -m pip install -r requirements-dev.txt
-npm install                 # vendors Three.js, installs eslint
+npm install                 # bundles Three.js into ui/vendor, installs eslint
 ```
 
 Always work inside the `.venv`. Meshwright depends on numpy, scipy and several compiled mesh
