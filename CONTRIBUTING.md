@@ -32,7 +32,7 @@ blank, re-run the installer — the app never loads scripts from a CDN, so it wo
 ## Tests and linting
 
 ```bash
-npm test              # pytest with coverage
+npm test              # pytest with coverage (uses .venv), then the Node picking tests
 npm run lint          # eslint (ui/js) + ruff (python)
 ```
 

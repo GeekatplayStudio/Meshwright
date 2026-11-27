@@ -4,7 +4,7 @@
   "description": "Meshwright - mesh analysis, repair and STL preparation for 3D printing",
   "main": "app.py",
   "scripts": {
-    "test": "pytest --cov=engine --cov=app tests/ && node --test tests/test_piece_picking.cjs",
+    "test": "node scripts/test.js",
     "lint": "npx eslint ui/js/ && ruff check .",
     "start": "python app.py",
     "mcp": "python mcp_server.py",

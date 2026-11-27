@@ -528,7 +528,7 @@ python -m venv .venv
 .venv\Scripts\python -m pip install -r requirements-dev.txt
 npm install       # bundles Three.js into ui/vendor and installs eslint
 
-npm test          # pytest, 347 tests
+npm test          # pytest, then the Node picking tests
 npm run lint      # eslint + ruff
 npm run mcp       # start the MCP server
 ```
