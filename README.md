@@ -9,7 +9,7 @@
 **Mesh analysis, repair, texturing and STL preparation for 3D printing**
 by [Geekatplay Studio](https://www.geekatplay.com) · Vladimir Chopine
 
-[![Version](https://img.shields.io/badge/version-1.6.0-6ea8fe.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.7.0-6ea8fe.svg)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-d9a441.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-3776ab.svg)](https://python.org)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-6ea8fe.svg)](#install)

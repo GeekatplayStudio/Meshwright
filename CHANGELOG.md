@@ -4,6 +4,8 @@ All notable changes to Meshwright. Format based on [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-11-27
+
 ### Added
 - **Rings for wax casting.** An image-to-3D service will produce a ring in under a minute, and the
   result looks right in a render and is almost never right on a finger: the bore is an oval, its size
